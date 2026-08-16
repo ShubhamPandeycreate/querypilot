@@ -83,10 +83,12 @@ class ModelClient:
         self.model = provider.model
         self._client = OpenAI(base_url=provider.base_url, api_key=provider.api_key)
 
+    # Waits 5s/10s/20s/40s: free-tier 429 windows are per-minute (Gemini asks
+    # for ~40s), so short backoffs would burn every attempt inside one window.
     @retry(
         retry=retry_if_exception_type(RETRYABLE),
-        wait=wait_exponential(multiplier=1, min=2, max=30),
-        stop=stop_after_attempt(4),
+        wait=wait_exponential(multiplier=5, min=5, max=90),
+        stop=stop_after_attempt(5),
         reraise=True,
     )
     def chat(

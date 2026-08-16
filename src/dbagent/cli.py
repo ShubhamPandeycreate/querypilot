@@ -126,7 +126,11 @@ def chat(
 
     def ask(text: str) -> None:
         console.rule(f"[bold]{text}")
-        result = loop.run(text)
+        try:
+            result = loop.run(text)
+        except Exception as error:  # provider errors: readable message, not a traceback
+            console.print(f"[red]{type(error).__name__}:[/] {str(error)[:400]}")
+            return
         console.print(Panel(Markdown(result.answer_md), title="answer", border_style="green"))
         if result.sql:
             console.print(Syntax(result.sql, "sql", word_wrap=True))
