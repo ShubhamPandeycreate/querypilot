@@ -42,6 +42,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]  # makes the top-level evals/ package importable in tests
 
 [tool.mypy]
 python_version = "3.12"

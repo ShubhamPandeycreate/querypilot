@@ -1,0 +1,102 @@
+[
+  {
+    "id": "chinook_001",
+    "question": "How many artists are in the database?",
+    "gold_sql": "SELECT count(*) FROM Artist"
+  },
+  {
+    "id": "chinook_002",
+    "question": "Which artist has the most albums, and how many?",
+    "gold_sql": "SELECT ar.Name, count(*) AS n FROM Album al JOIN Artist ar ON ar.ArtistId = al.ArtistId GROUP BY ar.ArtistId ORDER BY n DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_003",
+    "question": "What are the top 5 genres by number of tracks?",
+    "gold_sql": "SELECT g.Name, count(*) AS n FROM Track t JOIN Genre g ON g.GenreId = t.GenreId GROUP BY g.GenreId ORDER BY n DESC LIMIT 5"
+  },
+  {
+    "id": "chinook_004",
+    "question": "What is the total revenue across all invoices?",
+    "gold_sql": "SELECT round(sum(Total), 2) FROM Invoice"
+  },
+  {
+    "id": "chinook_005",
+    "question": "Which country's customers have generated the most invoice revenue?",
+    "gold_sql": "SELECT BillingCountry, round(sum(Total), 2) AS s FROM Invoice GROUP BY BillingCountry ORDER BY s DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_006",
+    "question": "How many customers are from Brazil?",
+    "gold_sql": "SELECT count(*) FROM Customer WHERE Country = 'Brazil'"
+  },
+  {
+    "id": "chinook_007",
+    "question": "Which support employee is assigned the most customers, and how many?",
+    "gold_sql": "SELECT e.FirstName || ' ' || e.LastName, count(*) AS n FROM Customer c JOIN Employee e ON e.EmployeeId = c.SupportRepId GROUP BY e.EmployeeId ORDER BY n DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_008",
+    "question": "What is the average invoice total, rounded to 2 decimals?",
+    "gold_sql": "SELECT round(avg(Total), 2) FROM Invoice"
+  },
+  {
+    "id": "chinook_009",
+    "question": "Which album has the most tracks, and how many tracks is that?",
+    "gold_sql": "SELECT al.Title, count(*) AS n FROM Track t JOIN Album al ON al.AlbumId = t.AlbumId GROUP BY al.AlbumId ORDER BY n DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_010",
+    "question": "Which playlist contains the most tracks, and how many?",
+    "gold_sql": "SELECT p.Name, count(*) AS n FROM PlaylistTrack pt JOIN Playlist p ON p.PlaylistId = pt.PlaylistId GROUP BY pt.PlaylistId ORDER BY n DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_011",
+    "question": "How many distinct billing countries appear on invoices?",
+    "gold_sql": "SELECT count(DISTINCT BillingCountry) FROM Invoice"
+  },
+  {
+    "id": "chinook_012",
+    "question": "What are the top 3 artists by total sales revenue?",
+    "gold_sql": "SELECT ar.Name, round(sum(il.UnitPrice * il.Quantity), 2) AS rev FROM InvoiceLine il JOIN Track t ON t.TrackId = il.TrackId JOIN Album al ON al.AlbumId = t.AlbumId JOIN Artist ar ON ar.ArtistId = al.ArtistId GROUP BY ar.ArtistId ORDER BY rev DESC LIMIT 3"
+  },
+  {
+    "id": "chinook_013",
+    "question": "How many tracks have never been purchased?",
+    "gold_sql": "SELECT count(*) FROM Track WHERE TrackId NOT IN (SELECT DISTINCT TrackId FROM InvoiceLine)"
+  },
+  {
+    "id": "chinook_014",
+    "question": "What was the total invoice revenue in the year 2010?",
+    "gold_sql": "SELECT round(sum(Total), 2) FROM Invoice WHERE strftime('%Y', InvoiceDate) = '2010'"
+  },
+  {
+    "id": "chinook_015",
+    "question": "Which media type is most common among tracks?",
+    "gold_sql": "SELECT mt.Name, count(*) AS n FROM Track t JOIN MediaType mt ON mt.MediaTypeId = t.MediaTypeId GROUP BY mt.MediaTypeId ORDER BY n DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_016",
+    "question": "Which billing city generated the highest total invoice amount?",
+    "gold_sql": "SELECT BillingCity, round(sum(Total), 2) AS s FROM Invoice GROUP BY BillingCity ORDER BY s DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_017",
+    "question": "How many tracks are longer than 5 minutes?",
+    "gold_sql": "SELECT count(*) FROM Track WHERE Milliseconds > 300000"
+  },
+  {
+    "id": "chinook_018",
+    "question": "What is the longest track, and how long is it in minutes (2 decimals)?",
+    "gold_sql": "SELECT Name, round(Milliseconds / 60000.0, 2) FROM Track ORDER BY Milliseconds DESC LIMIT 1"
+  },
+  {
+    "id": "chinook_019",
+    "question": "How many invoices were issued in each year? List year and count in chronological order.",
+    "gold_sql": "SELECT strftime('%Y', InvoiceDate) AS y, count(*) FROM Invoice GROUP BY y ORDER BY y"
+  },
+  {
+    "id": "chinook_020",
+    "question": "What is the highest track price, and how many tracks cost that much?",
+    "gold_sql": "SELECT UnitPrice, count(*) FROM Track WHERE UnitPrice = (SELECT max(UnitPrice) FROM Track) GROUP BY UnitPrice"
+  }
+]

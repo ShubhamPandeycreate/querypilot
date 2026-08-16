@@ -1,0 +1,213 @@
+"""Agent-loop control-flow tests driven by a scripted fake client. No network."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from dbagent.agent.loop import AgentLoop, AgentResult
+from dbagent.agent.prompts import TOO_MANY_FAILURES_NUDGE, USE_FINAL_ANSWER_NUDGE
+from dbagent.agent.tools import ToolBelt
+from dbagent.db.database import Database
+from dbagent.llm.client import LLMReply, ToolCall
+from dbagent.tracing.tracer import Tracer
+
+
+class FakeClient:
+    provider_name = "fake"
+    model = "fake-1"
+
+    def __init__(self, replies: list[LLMReply]) -> None:
+        self.replies = list(replies)
+        self.seen_messages: list[list[dict[str, Any]]] = []
+
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        tools: list[dict[str, Any]] | None = None,
+        max_tokens: int = 2048,
+    ) -> LLMReply:
+        self.seen_messages.append([dict(m) for m in messages])
+        if not self.replies:
+            raise AssertionError("FakeClient ran out of scripted replies")
+        return self.replies.pop(0)
+
+
+def tool_reply(*calls: tuple[str, dict[str, Any]]) -> LLMReply:
+    tool_calls = [
+        ToolCall(id=f"call_{i}", name=name, arguments=json.dumps(args))
+        for i, (name, args) in enumerate(calls)
+    ]
+    return LLMReply(
+        content=None,
+        tool_calls=tool_calls,
+        raw_message={
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": c.id,
+                    "type": "function",
+                    "function": {"name": c.name, "arguments": c.arguments},
+                }
+                for c in tool_calls
+            ],
+        },
+        usage={"prompt_tokens": 10, "completion_tokens": 5},
+    )
+
+
+def text_reply(text: str) -> LLMReply:
+    return LLMReply(
+        content=text,
+        tool_calls=[],
+        raw_message={"role": "assistant", "content": text},
+        usage={"prompt_tokens": 10, "completion_tokens": 5},
+    )
+
+
+def raw_json_tool_reply(name: str, raw_arguments: str) -> LLMReply:
+    call = ToolCall(id="call_bad", name=name, arguments=raw_arguments)
+    return LLMReply(
+        content=None,
+        tool_calls=[call],
+        raw_message={"role": "assistant", "tool_calls": []},
+    )
+
+
+@pytest.fixture
+def belt(chinook: Database, tmp_path: Path) -> ToolBelt:
+    return ToolBelt(chinook, charts_dir=tmp_path)
+
+
+def run_loop(
+    replies: list[LLMReply], belt: ToolBelt, **kwargs: Any
+) -> tuple[AgentResult, FakeClient, Tracer]:
+    client = FakeClient(replies)
+    tracer = Tracer(None)
+    result = AgentLoop(client, belt, tracer, **kwargs).run("test question")
+    return result, client, tracer
+
+
+def test_happy_path(belt: ToolBelt) -> None:
+    result, client, tracer = run_loop(
+        [
+            tool_reply(("list_tables", {})),
+            tool_reply(("run_sql", {"sql": "SELECT count(*) AS n FROM Artist"})),
+            tool_reply(
+                (
+                    "final_answer",
+                    {"answer_md": "**275 artists**", "sql": "SELECT ...", "caveats": ""},
+                )
+            ),
+        ],
+        belt,
+    )
+    assert result.stop_reason == "final_answer"
+    assert result.answer_md == "**275 artists**"
+    assert result.llm_calls == 3
+    assert result.usage == {"prompt_tokens": 30, "completion_tokens": 15}
+    kinds = [e["kind"] for e in tracer.events]
+    assert kinds == [
+        "question",
+        "llm_call",
+        "tool",
+        "llm_call",
+        "tool",
+        "llm_call",
+        "tool",
+        "final",
+    ]
+
+
+def test_sql_error_feeds_hint_back(belt: ToolBelt) -> None:
+    result, client, _ = run_loop(
+        [
+            tool_reply(("run_sql", {"sql": "SELECT WrongCol FROM Album"})),
+            tool_reply(("run_sql", {"sql": "SELECT Title FROM Album LIMIT 1"})),
+            tool_reply(("final_answer", {"answer_md": "fixed"})),
+        ],
+        belt,
+    )
+    assert result.stop_reason == "final_answer"
+    # The transcript the model saw on call 2 must contain the structured error hint.
+    second_call_transcript = json.dumps(client.seen_messages[1])
+    assert "no such column" in second_call_transcript
+    assert "get_schema" in second_call_transcript  # the hint
+
+
+def test_three_sql_failures_triggers_nudge(belt: ToolBelt) -> None:
+    bad = ("run_sql", {"sql": "SELECT Nope FROM Album"})
+    result, client, tracer = run_loop(
+        [
+            tool_reply(bad),
+            tool_reply(bad),
+            tool_reply(bad),
+            tool_reply(("final_answer", {"answer_md": "could not do it", "caveats": "3 failures"})),
+        ],
+        belt,
+    )
+    assert result.stop_reason == "final_answer"
+    final_transcript = client.seen_messages[-1]
+    assert any(
+        m.get("role") == "user" and m.get("content") == TOO_MANY_FAILURES_NUDGE
+        for m in final_transcript
+    )
+    assert any(
+        e["kind"] == "nudge" and e["reason"] == "too_many_sql_failures" for e in tracer.events
+    )
+
+
+def test_text_answer_gets_one_nudge_then_accepted(belt: ToolBelt) -> None:
+    result, client, _ = run_loop(
+        [text_reply("The answer is 42."), text_reply("The answer is 42.")],
+        belt,
+    )
+    assert result.stop_reason == "answered_in_text"
+    assert result.answer_md == "The answer is 42."
+    assert any(m.get("content") == USE_FINAL_ANSWER_NUDGE for m in client.seen_messages[-1])
+
+
+def test_max_llm_calls_stops_loop(belt: ToolBelt) -> None:
+    result, _, _ = run_loop(
+        [tool_reply(("list_tables", {})) for _ in range(5)],
+        belt,
+        max_llm_calls=5,
+    )
+    assert result.stop_reason == "max_llm_calls"
+    assert result.llm_calls == 5
+
+
+def test_bad_json_arguments_reported_not_fatal(belt: ToolBelt) -> None:
+    result, client, _ = run_loop(
+        [
+            raw_json_tool_reply("run_sql", "{not json"),
+            tool_reply(("final_answer", {"answer_md": "recovered"})),
+        ],
+        belt,
+    )
+    assert result.stop_reason == "final_answer"
+    assert "bad_json" in json.dumps(client.seen_messages[1])
+
+
+def test_chart_paths_collected(belt: ToolBelt) -> None:
+    result, _, _ = run_loop(
+        [
+            tool_reply(("run_sql", {"sql": "SELECT Name, GenreId FROM Genre LIMIT 3"})),
+            tool_reply(("render_chart", {"kind": "bar", "x": "Name", "y": "GenreId"})),
+            tool_reply(("final_answer", {"answer_md": "charted"})),
+        ],
+        belt,
+    )
+    assert len(result.chart_paths) == 1
+    assert Path(result.chart_paths[0]).exists()
+
+
+def test_tracer_writes_jsonl_file(belt: ToolBelt, tmp_path: Path) -> None:
+    trace_path = tmp_path / "t.jsonl"
+    client = FakeClient([tool_reply(("final_answer", {"answer_md": "done"}))])
+    AgentLoop(client, belt, Tracer(trace_path)).run("q")
+    lines = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    assert [e["kind"] for e in lines] == ["question", "llm_call", "tool", "final"]
+    assert lines[0]["provider"] == "fake"

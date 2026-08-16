@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-flash-latest"
     groq_model: str = "llama-3.3-70b-versatile"
     openrouter_model: str = "openai/gpt-oss-20b:free"
-    ollama_model: str = "qwen2.5-coder:7b"
+    # qwen3 for reliable tool calling; qwen2.5-coder:7b narrates tool calls as
+    # text instead of using the tools channel (observed 2026-08-16).
+    ollama_model: str = "qwen3:4b"
     ollama_base_url: str = "http://localhost:11434/v1"
 
 
