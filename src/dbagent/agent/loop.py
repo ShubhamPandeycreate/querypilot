@@ -160,9 +160,14 @@ class AgentLoop:
                 if call.name == "render_chart" and ok:
                     chart_paths.append(result["chart_path"])
                 if call.name == "final_answer" and ok:
+                    # Models often omit the sql argument; the toolbelt knows the
+                    # last query that actually produced data — use it as fallback.
+                    sql = result.get("sql", "") or (
+                        self.toolbelt.last_result.sql if self.toolbelt.last_result else ""
+                    )
                     final = AgentResult(
                         answer_md=result["answer_md"],
-                        sql=result.get("sql", ""),
+                        sql=sql,
                         caveats=result.get("caveats", ""),
                         stop_reason="final_answer",
                     )

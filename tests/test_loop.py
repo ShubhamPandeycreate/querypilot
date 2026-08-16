@@ -191,6 +191,18 @@ def test_bad_json_arguments_reported_not_fatal(belt: ToolBelt) -> None:
     assert "bad_json" in json.dumps(client.seen_messages[1])
 
 
+def test_final_answer_sql_backfilled_from_last_query(belt: ToolBelt) -> None:
+    result, _, _ = run_loop(
+        [
+            tool_reply(("run_sql", {"sql": "SELECT count(*) AS n FROM Artist"})),
+            tool_reply(("final_answer", {"answer_md": "275 artists"})),  # sql omitted
+        ],
+        belt,
+    )
+    assert result.stop_reason == "final_answer"
+    assert "COUNT(*)" in result.sql.upper()  # backfilled from the executed query
+
+
 def test_chart_paths_collected(belt: ToolBelt) -> None:
     result, _, _ = run_loop(
         [

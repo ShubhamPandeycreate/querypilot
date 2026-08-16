@@ -239,10 +239,14 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "type": "object",
                 "properties": {
                     "answer_md": {"type": "string", "description": "The answer, markdown."},
-                    "sql": {"type": "string", "description": "The SQL the answer rests on."},
+                    "sql": {
+                        "type": "string",
+                        "description": "The exact SQL your answer rests on. Copy it verbatim "
+                        "from your successful run_sql call.",
+                    },
                     "caveats": {"type": "string", "description": "Assumptions or limitations."},
                 },
-                "required": ["answer_md"],
+                "required": ["answer_md", "sql"],
             },
         },
     },
