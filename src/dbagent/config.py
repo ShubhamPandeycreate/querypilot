@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # qwen3 for reliable tool calling; qwen2.5-coder:7b narrates tool calls as
     # text instead of using the tools channel (observed 2026-08-16).
     ollama_model: str = "qwen3:4b"
+    # qwen3 thinking mode costs ~6 min/question on a 6GB laptop GPU; the
+    # /no_think soft switch trades some SQL quality for ~10x faster iteration.
+    ollama_no_think: bool = True
     ollama_base_url: str = "http://localhost:11434/v1"
 
 
@@ -33,6 +36,8 @@ class Provider:
     base_url: str
     api_key: str
     model: str
+    # Appended to the system message (e.g. qwen3's "/no_think" soft switch).
+    system_suffix: str = ""
 
 
 def get_settings() -> Settings:
@@ -67,5 +72,6 @@ def get_providers(settings: Settings | None = None) -> dict[str, Provider]:
             base_url=s.ollama_base_url,
             api_key="ollama",  # Ollama ignores the key but the SDK requires one
             model=s.ollama_model,
+            system_suffix="/no_think" if s.ollama_no_think else "",
         ),
     }

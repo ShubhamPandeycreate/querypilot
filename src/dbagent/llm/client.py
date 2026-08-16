@@ -99,6 +99,10 @@ class ModelClient:
         max_tokens: int = 2048,
         temperature: float = 0.2,  # low: we want format-compliant tool calls and stable SQL
     ) -> LLMReply:
+        if self.provider.system_suffix and messages and messages[0].get("role") == "system":
+            first = dict(messages[0])
+            first["content"] = f"{first['content']}\n{self.provider.system_suffix}"
+            messages = [first, *messages[1:]]
         start = time.perf_counter()
         response = self._client.chat.completions.create(
             model=self.model,
