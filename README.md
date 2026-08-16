@@ -10,7 +10,7 @@ through one OpenAI-compatible client, with a hand-rolled agent loop (no agent fr
 ## Roadmap
 
 - [x] **Phase 0** — Project setup, provider smoke test across all four backends
-- [ ] **Phase 1** — SQL toolbelt + safety layer (sqlglot guard, read-only execution)
+- [x] **Phase 1** — SQL toolbelt + safety layer (sqlglot guard, read-only execution, 6 agent tools)
 - [ ] **Phase 2** — The agent loop: tool calling, self-correction, JSONL tracing
 - [ ] **Phase 3** — Eval harness: execution accuracy on BIRD Mini-Dev + Spider dev
 - [ ] **Phase 4** — Streamlit app with live trace viewer, public deployment
