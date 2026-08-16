@@ -169,6 +169,19 @@ def test_text_answer_gets_one_nudge_then_accepted(belt: ToolBelt) -> None:
     assert any(m.get("content") == USE_FINAL_ANSWER_NUDGE for m in client.seen_messages[-1])
 
 
+def test_text_answer_backfills_sql_from_last_query(belt: ToolBelt) -> None:
+    result, _, _ = run_loop(
+        [
+            tool_reply(("run_sql", {"sql": "SELECT count(*) AS n FROM Artist"})),
+            text_reply("There are 275 artists."),
+            text_reply("There are 275 artists."),
+        ],
+        belt,
+    )
+    assert result.stop_reason == "answered_in_text"
+    assert "COUNT(*)" in result.sql.upper()
+
+
 def test_max_llm_calls_stops_loop(belt: ToolBelt) -> None:
     result, _, _ = run_loop(
         [tool_reply(("list_tables", {})) for _ in range(5)],

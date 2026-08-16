@@ -113,8 +113,16 @@ class AgentLoop:
                 # Model answered in text. Nudge once toward final_answer; accept after.
                 if reply.content and nudged_for_final_answer:
                     messages.append(reply.raw_message)
+                    # Same backfill as final_answer: the model answered, so the
+                    # last successful query is the SQL its answer rests on.
                     return finish(
-                        AgentResult(answer_md=reply.content, stop_reason="answered_in_text")
+                        AgentResult(
+                            answer_md=reply.content,
+                            stop_reason="answered_in_text",
+                            sql=self.toolbelt.last_result.sql
+                            if self.toolbelt.last_result
+                            else "",
+                        )
                     )
                 messages.append(reply.raw_message)
                 messages.append({"role": "user", "content": USE_FINAL_ANSWER_NUDGE})
