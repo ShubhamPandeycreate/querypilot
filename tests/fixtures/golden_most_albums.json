@@ -1,0 +1,178 @@
+{
+  "provider": "ollama",
+  "model": "qwen3:4b",
+  "meta": {
+    "question": "Which artist has the most albums, and how many?",
+    "expect_contains": [
+      "Iron Maiden",
+      "21"
+    ]
+  },
+  "exchanges": [
+    {
+      "n_messages": 2,
+      "reply": {
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_j1kcyvo9",
+            "name": "list_tables",
+            "arguments": "{}"
+          }
+        ],
+        "raw_message": {
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_j1kcyvo9",
+              "function": {
+                "arguments": "{}",
+                "name": "list_tables"
+              },
+              "type": "function",
+              "index": 0
+            }
+          ]
+        },
+        "usage": {
+          "prompt_tokens": 897,
+          "completion_tokens": 235
+        },
+        "latency_s": 19.145058499998413
+      }
+    },
+    {
+      "n_messages": 4,
+      "reply": {
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_epty9zin",
+            "name": "get_schema",
+            "arguments": "{\"tables\":[\"Album\",\"Artist\"]}"
+          }
+        ],
+        "raw_message": {
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_epty9zin",
+              "function": {
+                "arguments": "{\"tables\":[\"Album\",\"Artist\"]}",
+                "name": "get_schema"
+              },
+              "type": "function",
+              "index": 0
+            }
+          ]
+        },
+        "usage": {
+          "prompt_tokens": 1092,
+          "completion_tokens": 289
+        },
+        "latency_s": 7.161229000004823
+      }
+    },
+    {
+      "n_messages": 6,
+      "reply": {
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_oftgcc8a",
+            "name": "sample_rows",
+            "arguments": "{\"n\":2,\"table\":\"Artist\"}"
+          }
+        ],
+        "raw_message": {
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_oftgcc8a",
+              "function": {
+                "arguments": "{\"n\":2,\"table\":\"Artist\"}",
+                "name": "sample_rows"
+              },
+              "type": "function",
+              "index": 0
+            }
+          ]
+        },
+        "usage": {
+          "prompt_tokens": 1314,
+          "completion_tokens": 1677
+        },
+        "latency_s": 595.1822223000054
+      }
+    },
+    {
+      "n_messages": 8,
+      "reply": {
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_3mdttwft",
+            "name": "run_sql",
+            "arguments": "{\"sql\":\"SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1\"}"
+          }
+        ],
+        "raw_message": {
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_3mdttwft",
+              "function": {
+                "arguments": "{\"sql\":\"SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1\"}",
+                "name": "run_sql"
+              },
+              "type": "function",
+              "index": 0
+            }
+          ]
+        },
+        "usage": {
+          "prompt_tokens": 1390,
+          "completion_tokens": 1044
+        },
+        "latency_s": 21.23902920000546
+      }
+    },
+    {
+      "n_messages": 10,
+      "reply": {
+        "content": "",
+        "tool_calls": [
+          {
+            "id": "call_ummsk0t0",
+            "name": "final_answer",
+            "arguments": "{\"caveats\":\"Data capped at 1 row in query result (expected to be exact for top artist). Album counts reflect total entries in the Album table (347 rows).\",\"sql\":\"SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1\",\"answer_md\":\"Iron Maiden has the most albums with **21**.\\n\\nSQL: `SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1`\"}"
+          }
+        ],
+        "raw_message": {
+          "content": "",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "id": "call_ummsk0t0",
+              "function": {
+                "arguments": "{\"caveats\":\"Data capped at 1 row in query result (expected to be exact for top artist). Album counts reflect total entries in the Album table (347 rows).\",\"sql\":\"SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1\",\"answer_md\":\"Iron Maiden has the most albums with **21**.\\n\\nSQL: `SELECT Artist.Name, COUNT(Album.AlbumId) AS AlbumCount FROM Album JOIN Artist ON Album.ArtistId = Artist.ArtistId GROUP BY Artist.Name ORDER BY AlbumCount DESC LIMIT 1`\"}",
+                "name": "final_answer"
+              },
+              "type": "function",
+              "index": 0
+            }
+          ]
+        },
+        "usage": {
+          "prompt_tokens": 1539,
+          "completion_tokens": 475
+        },
+        "latency_s": 10.036109799999394
+      }
+    }
+  ]
+}
