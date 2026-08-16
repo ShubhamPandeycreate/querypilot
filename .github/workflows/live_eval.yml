@@ -1,0 +1,39 @@
+# Manual live smoke eval: 5 Chinook questions in agent mode against Groq.
+# Costs ~25-30 real API calls per run, so it only triggers by hand
+# (Actions tab -> Live eval -> Run workflow). Requires the GROQ_API_KEY
+# repo secret: gh secret set GROQ_API_KEY
+#
+# Deliberately NOT on a cron schedule: API spending stays a human decision.
+
+name: Live eval
+
+on:
+  workflow_dispatch:
+
+jobs:
+  live-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Run 5-question live eval (Groq, agent mode)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::error::GROQ_API_KEY secret not set (gh secret set GROQ_API_KEY)"; exit 1
+          fi
+          uv run python -m dbagent eval --dataset chinook --mode agent \
+            --provider groq --subset 5 --out evals/results/live_ci.jsonl
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-eval-results
+          path: |
+            evals/results/live_ci.jsonl
+            evals/reports/chinook_agent_groq.md
+          if-no-files-found: ignore
