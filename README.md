@@ -11,8 +11,8 @@ through one OpenAI-compatible client, with a hand-rolled agent loop (no agent fr
 
 - [x] **Phase 0** — Project setup, provider smoke test across all four backends
 - [x] **Phase 1** — SQL toolbelt + safety layer (sqlglot guard, read-only execution, 6 agent tools)
-- [ ] **Phase 2** — The agent loop: tool calling, self-correction, JSONL tracing
-- [ ] **Phase 3** — Eval harness: execution accuracy on BIRD Mini-Dev + Spider dev
+- [x] **Phase 2** — The agent loop: tool calling, self-correction, JSONL tracing, golden-trace CI replay (17/20 on the local smoke set with a 4B model)
+- [ ] **Phase 3** — Eval harness: execution accuracy on BIRD Mini-Dev + Spider dev *(harness + BIRD staged; baselines next)*
 - [ ] **Phase 4** — Streamlit app with live trace viewer, public deployment
 - [ ] **Phase 5** — Error analysis, architecture docs, v1.0
 - [ ] **Stretch** — QLoRA fine-tune of a small open model; GRPO RL ablation with execution rewards
