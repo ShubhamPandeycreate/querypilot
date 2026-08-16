@@ -158,6 +158,69 @@ def chat(
             console.print(f"[dim]trace: {trace_path}[/]")
 
 
+@app.command()
+def eval(
+    dataset: str = typer.Option("bird", help="bird | spider | chinook"),
+    mode: str = typer.Option("single_shot", help="single_shot | agent"),
+    provider: str = typer.Option("ollama", help="gemini | groq | openrouter | ollama"),
+    subset: int = typer.Option(0, help="Run only a fixed deterministic subset of N questions."),
+    rpm: int = typer.Option(0, help="Requests/minute cap (0 = provider default)."),
+    concurrency: int = typer.Option(1, help="Parallel questions (keep 1 for local models)."),
+    out: str = typer.Option("", help="Results JSONL path (default: evals/results/<auto>.jsonl)"),
+) -> None:
+    """Run (or resume) an execution-accuracy eval and print the summary."""
+    from evals.datasets import LOADERS, fixed_subset
+    from evals.runner import run_eval, summarize, write_report
+
+    from dbagent.config import get_providers
+    from dbagent.llm.client import ModelClient
+
+    if dataset not in LOADERS:
+        raise typer.BadParameter(f"Unknown dataset {dataset!r}. Choose: {list(LOADERS)}")
+    items = LOADERS[dataset]()
+    if subset:
+        items = fixed_subset(items, subset)
+
+    providers = get_providers()
+    chosen = providers[provider]
+    if provider != "ollama" and not chosen.api_key:
+        console.print(f"[red]No API key configured for {provider}.[/]")
+        raise typer.Exit(code=1)
+    # Free-tier defaults, conservative: Gemini flash 5 RPM (observed), Groq 25
+    # (limit 30), OpenRouter 15 (limit 20). Local: effectively unlimited.
+    default_rpm = {"gemini": 5, "groq": 25, "openrouter": 15, "ollama": 600}
+    effective_rpm = rpm or default_rpm[provider]
+
+    out_path = out or f"evals/results/{dataset}_{mode}_{provider}.jsonl"
+    console.print(
+        f"[bold]eval[/] {dataset} n={len(items)} mode={mode} model={chosen.model} "
+        f"rpm={effective_rpm} out={out_path}"
+    )
+    if mode == "agent":
+        console.print(f"[dim]~{len(items) * 5} LLM calls expected (about 5/question)[/]")
+
+    def on_record(record) -> None:  # noqa: ANN001 - EvalRecord
+        status = "[green]match[/]" if record.match else "[red]miss[/]"
+        note = record.error[:60] if record.error else ""
+        console.print(f"  {record.item_id} {status} {record.latency_s}s {note}")
+
+    run_eval(
+        items,
+        mode=mode,
+        client=ModelClient(chosen),
+        rpm=effective_rpm,
+        out_path=out_path,
+        concurrency=concurrency,
+        on_record=on_record,
+    )
+    summary = summarize(out_path)
+    console.print(summary)
+    report = write_report(
+        [summary], f"evals/reports/{dataset}_{mode}_{provider}.md", f"QueryPilot eval: {dataset}"
+    )
+    console.print(f"[green]report:[/] {report}")
+
+
 def main() -> None:
     app()
 
