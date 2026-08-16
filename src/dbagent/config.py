@@ -14,9 +14,11 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     openrouter_api_key: str = ""
 
-    gemini_model: str = "gemini-2.5-flash"
+    # "-latest" alias tracks the current free-tier Flash model; pin an exact
+    # version (e.g. gemini-3.6-flash) when running evals so results reproduce.
+    gemini_model: str = "gemini-flash-latest"
     groq_model: str = "llama-3.3-70b-versatile"
-    openrouter_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    openrouter_model: str = "openai/gpt-oss-20b:free"
     ollama_model: str = "qwen2.5-coder:7b"
     ollama_base_url: str = "http://localhost:11434/v1"
 

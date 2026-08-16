@@ -16,7 +16,9 @@ class ModelClient:
         self.provider = provider
         self._client = OpenAI(base_url=provider.base_url, api_key=provider.api_key)
 
-    def complete(self, prompt: str, *, max_tokens: int = 64) -> str:
+    # Reasoning models (e.g. current Gemini Flash) spend "thinking" tokens out of
+    # max_tokens before any visible text; a small cap yields empty replies.
+    def complete(self, prompt: str, *, max_tokens: int = 512) -> str:
         """Single-turn text completion. Raises on any API error."""
         response = self._client.chat.completions.create(
             model=self.provider.model,
