@@ -28,6 +28,14 @@ from dbagent.tracing.tracer import Tracer
 
 MAX_LLM_CALLS = 12
 MAX_CONSECUTIVE_SQL_FAILURES = 3
+# Per-turn completion budget. Reasoning models (qwen3, gemini flash) think
+# before emitting tool calls; when thinking outruns the budget the reply comes
+# back truncated with NO content and NO tool calls, and the episode treadmills
+# on nudges until the call cap (observed 2026-08-19 on BIRD: 41/55 questions
+# stalled this way at max_tokens=2048 once a wide schema entered the
+# transcript). 3584 fits a worst-case think plus late-episode prompts inside
+# an 8192-token local context.
+AGENT_MAX_TOKENS = 3584
 
 
 @dataclass
@@ -96,7 +104,7 @@ class AgentLoop:
             return result
 
         while llm_calls < self.max_llm_calls:
-            reply = self.client.chat(messages, tools=TOOL_SCHEMAS)
+            reply = self.client.chat(messages, tools=TOOL_SCHEMAS, max_tokens=AGENT_MAX_TOKENS)
             llm_calls += 1
             for key in total_usage:
                 total_usage[key] += reply.usage.get(key, 0)

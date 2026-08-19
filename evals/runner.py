@@ -34,6 +34,15 @@ from evals.metrics import results_match
 
 EVAL_ROW_LIMIT = 100_000  # never let the guard's LIMIT injection distort results
 EVAL_TIMEOUT_S = 30.0
+# Reasoning models spend thinking tokens before any content. qwen3:4b needs
+# 2400-3600 tokens on a typical BIRD question; at 2048 it was truncated
+# mid-thought and returned empty content, which scored as "no SQL produced"
+# (measured 2026-08-19: 6 of the first 7 questions failed this way). NB: run
+# local evals with OLLAMA_NO_THINK=false - suppressing thinking makes qwen3:4b
+# degenerate into endless output on BIRD-difficulty questions (0 SQL in 8
+# trials), while thinking-enabled finishes cleanly. Budget must also fit the
+# context window: max BIRD prompt ~2483 tok + 5120 < 8192 server ctx.
+SINGLE_SHOT_MAX_TOKENS = 5120
 
 SINGLE_SHOT_SYSTEM = """\
 You translate questions into a single SQLite SELECT statement.
@@ -164,14 +173,20 @@ def run_one(item: EvalItem, mode: str, client: ChatClient) -> EvalRecord:
     started = time.perf_counter()
     try:
         if mode == "single_shot":
-            reply = client.chat(build_single_shot_prompt(item), max_tokens=2048)
+            reply = client.chat(build_single_shot_prompt(item), max_tokens=SINGLE_SHOT_MAX_TOKENS)
             record.llm_calls = 1
             record.usage = dict(reply.usage)
             record.predicted_sql = extract_sql(reply.content or "")
         elif mode == "agent":
             db = Database(item.db_path, timeout_seconds=EVAL_TIMEOUT_S)
             try:
-                result = AgentLoop(client, ToolBelt(db), Tracer(None)).run(item.question)
+                # Parity with single_shot: BIRD's evidence hint goes to both
+                # modes (the agent path silently dropped it before 2026-08-19,
+                # forcing extra exploration turns to rediscover domain facts).
+                question = item.question
+                if item.evidence:
+                    question = f"{item.question}\n\nHint: {item.evidence}"
+                result = AgentLoop(client, ToolBelt(db), Tracer(None)).run(question)
             finally:
                 db.close()
             record.llm_calls = result.llm_calls
