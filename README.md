@@ -12,10 +12,25 @@ through one OpenAI-compatible client, with a hand-rolled agent loop (no agent fr
 - [x] **Phase 0** — Project setup, provider smoke test across all four backends
 - [x] **Phase 1** — SQL toolbelt + safety layer (sqlglot guard, read-only execution, 6 agent tools)
 - [x] **Phase 2** — The agent loop: tool calling, self-correction, JSONL tracing, golden-trace CI replay (17/20 on the local smoke set with a 4B model)
-- [ ] **Phase 3** — Eval harness: execution accuracy on BIRD Mini-Dev + Spider dev *(harness + BIRD staged; baselines next)*
+- [x] **Phase 3** — Eval harness + BIRD Mini-Dev baselines ([full report](evals/reports/baseline.md))
 - [ ] **Phase 4** — Streamlit app with live trace viewer, public deployment
 - [ ] **Phase 5** — Error analysis, architecture docs, v1.0
 - [ ] **Stretch** — QLoRA fine-tune of a small open model; GRPO RL ablation with execution rewards
+
+## Benchmark results
+
+BIRD Mini-Dev, 100-question fixed subset, execution accuracy:
+
+| model | mode | accuracy | avg latency |
+|---|---|---|---|
+| qwen3:4b (local, 6GB GPU) | single-shot | **44.0%** | 54.5s |
+| qwen3:4b (local, 6GB GPU) | agent | 41.0% | 287.7s |
+| gpt-oss-120b (Groq) | single-shot | **50.0%** | 20.0s |
+
+A quantized 4B model on a laptop GPU lands within 6 points of a 120B hosted model at
+$0/query. Agentic self-correction *underperformed* single-shot on the small model —
+[the report](evals/reports/baseline.md) breaks down why, and why that is mostly not
+about the call budget.
 
 ## Quickstart
 
