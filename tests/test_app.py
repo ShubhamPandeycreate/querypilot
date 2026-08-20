@@ -196,3 +196,16 @@ def test_clear_conversation_resets_the_transcript(monkeypatch: pytest.MonkeyPatc
     next(b for b in at.sidebar.button if b.label == "Clear conversation").click().run()
     assert at.session_state.turns == []
     assert at.session_state.tally.llm_calls == 0
+
+
+def test_duplicate_result_columns_are_disambiguated() -> None:
+    """`SELECT a.Name, b.Name FROM ...` must not blow up the data table."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("_qp_app_helpers", APP)
+    assert spec and spec.loader
+    # Importing runs the page, which is fine: no widgets are interacted with.
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    frame = module.to_frame(["Name", "Name", "n"], [("a", "b", 1)])
+    assert list(frame.columns) == ["Name", "Name (2)", "n"]

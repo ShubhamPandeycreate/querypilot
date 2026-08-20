@@ -236,7 +236,8 @@ def format_step(event: dict[str, Any]) -> str:
 
 
 def to_frame(columns: list[str], rows: list[Any]) -> pd.DataFrame:
-    """Arrow chokes on bytes and mixed types; stringify anything exotic."""
+    """Arrow chokes on bytes, mixed types and duplicate column names — a join
+    like `SELECT a.Name, b.Name` produces the last one routinely."""
 
     def cell(value: Any) -> Any:
         if isinstance(value, bytes):
@@ -245,7 +246,12 @@ def to_frame(columns: list[str], rows: list[Any]) -> pd.DataFrame:
             return value
         return str(value)
 
-    return pd.DataFrame([[cell(v) for v in row] for row in rows], columns=columns)
+    seen: dict[str, int] = {}
+    labels = []
+    for column in columns:
+        seen[column] = seen.get(column, 0) + 1
+        labels.append(column if seen[column] == 1 else f"{column} ({seen[column]})")
+    return pd.DataFrame([[cell(v) for v in row] for row in rows], columns=labels)
 
 
 def trace_frame(events: list[dict[str, Any]]) -> pd.DataFrame:
@@ -492,6 +498,9 @@ def main() -> None:
             turn = run_question(config, question)
             render_answer(turn, index=len(st.session_state.turns))
         st.session_state.turns.append(turn)
+        # The sidebar drew its allowance meters before this question ran; rerun
+        # so they show what it actually cost.
+        st.rerun()
 
 
 main()
