@@ -91,3 +91,16 @@ def test_build_client_overrides_the_configured_key() -> None:
 def test_build_client_rejects_unknown_providers() -> None:
     with pytest.raises(ValueError, match="Unknown provider"):
         demo.build_client("gpt-5-imaginary")
+
+
+def test_allow_thinking_drops_the_local_no_think_switch() -> None:
+    """Single-shot mode must reproduce the configuration the baseline used."""
+    default = demo.build_client("ollama")
+    thinking = demo.build_client("ollama", allow_thinking=True)
+    assert default.provider.system_suffix == "/no_think"  # type: ignore[attr-defined]
+    assert thinking.provider.system_suffix == ""  # type: ignore[attr-defined]
+
+
+def test_allow_thinking_is_a_no_op_for_hosted_providers() -> None:
+    client = demo.build_client("groq", "k", allow_thinking=True)
+    assert client.provider.system_suffix == ""  # type: ignore[attr-defined]

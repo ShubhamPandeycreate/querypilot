@@ -26,7 +26,7 @@ def no_real_keys(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def app(monkeypatch: pytest.MonkeyPatch, client: FakeClient | None = None) -> AppTest:
     if client is not None:
-        monkeypatch.setattr(demo, "build_client", lambda provider, api_key="": client)
+        monkeypatch.setattr(demo, "build_client", lambda provider, api_key="", **kwargs: client)
     return AppTest.from_file(APP, default_timeout=60)
 
 
@@ -177,7 +177,9 @@ def test_a_provider_failure_is_a_message_not_a_traceback(monkeypatch: pytest.Mon
         def chat(self, messages, **kwargs):  # noqa: ANN001, ANN003, ANN201
             raise ConnectionError("the network is on fire")
 
-    monkeypatch.setattr(demo, "build_client", lambda provider, api_key="": ExplodingClient())
+    monkeypatch.setattr(
+        demo, "build_client", lambda provider, api_key="", **kwargs: ExplodingClient()
+    )
     at = AppTest.from_file(APP, default_timeout=60).run()
     at.chat_input[0].set_value("How many artists are there?").run()
 

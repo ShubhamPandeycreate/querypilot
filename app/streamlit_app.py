@@ -381,7 +381,11 @@ def run_question(config: dict[str, Any], question: str) -> dict[str, Any]:
     try:
         budget.start_question()
         client = BudgetedClient(
-            demo.build_client(config["provider"], choice.api_key),
+            demo.build_client(
+                config["provider"],
+                choice.api_key,
+                allow_thinking=config["mode"] == SINGLE_SHOT,
+            ),
             budget,
             shared_limiter() if choice.source == "shared" else None,
         )

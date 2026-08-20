@@ -189,12 +189,22 @@ def model_name(provider: str) -> str:
     return get_providers()[provider].model
 
 
-def build_client(provider: str, api_key: str = "") -> ChatClient:
-    """The app's single door to the network — patched out in tests."""
+def build_client(provider: str, api_key: str = "", *, allow_thinking: bool = False) -> ChatClient:
+    """The app's single door to the network — patched out in tests.
+
+    `allow_thinking` drops the local model's "/no_think" switch. Single-shot
+    mode needs it: qwen3:4b with thinking suppressed degenerates into endless
+    non-SQL output on harder questions (0 SQL in 8 trials, measured
+    2026-08-19), and the published single-shot baseline was measured with
+    thinking on. Agent mode is the opposite — small per-turn decisions are fine
+    without it, and /no_think is ~10x faster.
+    """
     providers = get_providers()
     if provider not in providers:
         raise ValueError(f"Unknown provider {provider!r}. Choose: {sorted(providers)}")
     chosen = providers[provider]
     if api_key:
         chosen = replace(chosen, api_key=api_key)
+    if allow_thinking and chosen.system_suffix:
+        chosen = replace(chosen, system_suffix="")
     return ModelClient(chosen)
