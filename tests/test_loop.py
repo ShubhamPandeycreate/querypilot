@@ -236,3 +236,13 @@ def test_tracer_writes_jsonl_file(belt: ToolBelt, tmp_path: Path) -> None:
     lines = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
     assert [e["kind"] for e in lines] == ["question", "llm_call", "tool", "final"]
     assert lines[0]["provider"] == "fake"
+
+
+def test_chart_summary_hides_the_absolute_path(belt: ToolBelt) -> None:
+    """Traces are downloadable from the public demo, so they must not carry
+    the server's directory layout (or, running locally, a username)."""
+    from dbagent.agent.loop import _summarize
+
+    summary = _summarize("render_chart", {"chart_path": r"C:\Users\someone\AppData\chart_1.png"})
+    assert summary == "chart saved: chart_1.png"
+    assert "Users" not in summary

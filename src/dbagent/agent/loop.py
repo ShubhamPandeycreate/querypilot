@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from dbagent.agent.prompts import (
@@ -226,7 +227,10 @@ def _summarize(tool_name: str, result: dict[str, Any]) -> str:
     if tool_name in ("sample_rows", "run_sql"):
         return f"{result['row_count']} rows" + (" (truncated)" if result["truncated"] else "")
     if tool_name == "render_chart":
-        return f"chart saved: {result['chart_path']}"
+        # Filename only: traces are downloadable from the public demo, and an
+        # absolute path would publish the server's directory layout (and, when
+        # run locally, the operator's username).
+        return f"chart saved: {Path(result['chart_path']).name}"
     if tool_name == "final_answer":
         return f"answer: {result['answer_md'][:120]}"
     return "ok"
