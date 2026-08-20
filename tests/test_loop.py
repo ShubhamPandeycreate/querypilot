@@ -21,6 +21,7 @@ class FakeClient:
     def __init__(self, replies: list[LLMReply]) -> None:
         self.replies = list(replies)
         self.seen_messages: list[list[dict[str, Any]]] = []
+        self.seen_max_tokens: list[int] = []
 
     def chat(
         self,
@@ -30,6 +31,7 @@ class FakeClient:
         max_tokens: int = 2048,
     ) -> LLMReply:
         self.seen_messages.append([dict(m) for m in messages])
+        self.seen_max_tokens.append(max_tokens)
         if not self.replies:
             raise AssertionError("FakeClient ran out of scripted replies")
         return self.replies.pop(0)
@@ -246,3 +248,67 @@ def test_chart_summary_hides_the_absolute_path(belt: ToolBelt) -> None:
     summary = _summarize("render_chart", {"chart_path": r"C:\Users\someone\AppData\chart_1.png"})
     assert summary == "chart saved: chart_1.png"
     assert "Users" not in summary
+
+
+def empty_reply() -> LLMReply:
+    """What a truncated reply looks like: no content, no tool calls."""
+    return LLMReply(
+        content=None,
+        tool_calls=[],
+        raw_message={"role": "assistant", "content": None},
+        usage={"prompt_tokens": 900, "completion_tokens": 3584},
+    )
+
+
+def test_empty_reply_is_retried_with_a_larger_budget(belt: ToolBelt) -> None:
+    """The cause is truncation, so the useful intervention is more room."""
+    client = FakeClient(
+        [
+            empty_reply(),
+            tool_reply(("final_answer", {"answer_md": "**275** artists.", "sql": "SELECT 1"})),
+        ]
+    )
+    result = AgentLoop(client, belt, Tracer(None)).run("how many artists?")
+
+    assert result.stop_reason == "final_answer"
+    assert client.seen_max_tokens[0] < client.seen_max_tokens[1]
+    assert client.seen_max_tokens[1] == 5120
+
+
+def test_two_empty_replies_stop_the_episode(belt: ToolBelt) -> None:
+    """Without this the loop nudge-treadmills to the 12-call cap."""
+    client = FakeClient([empty_reply(), empty_reply()])
+    events: list[dict[str, Any]] = []
+    result = AgentLoop(client, belt, Tracer(None), on_step=events.append).run("anything")
+
+    assert result.stop_reason == "empty_replies"
+    assert result.llm_calls == 2  # not 12
+    assert "budget" in result.answer_md
+    assert [e["reason"] for e in events if e["kind"] == "retry"] == ["empty_reply", "empty_reply"]
+
+
+def test_empty_reply_counter_resets_after_a_good_reply(belt: ToolBelt) -> None:
+    """Alternating empty and useful replies is not a stuck episode."""
+    client = FakeClient(
+        [
+            empty_reply(),
+            tool_reply(("run_sql", {"sql": "SELECT count(*) FROM Artist"})),
+            empty_reply(),
+            tool_reply(("final_answer", {"answer_md": "**275**", "sql": "SELECT 1"})),
+        ]
+    )
+    result = AgentLoop(client, belt, Tracer(None)).run("how many artists?")
+
+    assert result.stop_reason == "final_answer"
+    assert result.llm_calls == 4
+
+
+def test_prose_reply_is_still_nudged_not_treated_as_empty(belt: ToolBelt) -> None:
+    """An empty reply and a chatty one need opposite responses."""
+    client = FakeClient([text_reply("There are 275 artists."), text_reply("There are 275.")])
+    events: list[dict[str, Any]] = []
+    result = AgentLoop(client, belt, Tracer(None), on_step=events.append).run("how many?")
+
+    assert result.stop_reason == "answered_in_text"
+    assert not [e for e in events if e["kind"] == "retry"]
+    assert [e["reason"] for e in events if e["kind"] == "nudge"] == ["no_tool_call"]

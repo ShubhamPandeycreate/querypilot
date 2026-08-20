@@ -93,12 +93,25 @@ def test_build_client_rejects_unknown_providers() -> None:
         demo.build_client("gpt-5-imaginary")
 
 
-def test_allow_thinking_drops_the_local_no_think_switch() -> None:
-    """Single-shot mode must reproduce the configuration the baseline used."""
-    default = demo.build_client("ollama")
-    thinking = demo.build_client("ollama", allow_thinking=True)
-    assert default.provider.system_suffix == "/no_think"  # type: ignore[attr-defined]
-    assert thinking.provider.system_suffix == ""  # type: ignore[attr-defined]
+def test_no_think_switch_is_off_by_default() -> None:
+    """Measured 2026-08-20: the switch does nothing on Ollama + qwen3:4b, so we
+    do not pay prompt tokens for it. See Settings.ollama_no_think."""
+    assert demo.build_client("ollama").provider.system_suffix == ""  # type: ignore[attr-defined]
+
+
+def test_allow_thinking_strips_a_configured_suffix(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The mechanism still has to work for anyone who turns the switch on."""
+    from dataclasses import replace as replace_dc
+
+    from dbagent.config import get_providers
+
+    providers = get_providers()
+    providers["ollama"] = replace_dc(providers["ollama"], system_suffix="/no_think")
+    monkeypatch.setattr(demo, "get_providers", lambda *a, **k: providers)
+
+    assert demo.build_client("ollama").provider.system_suffix == "/no_think"  # type: ignore[attr-defined]
+    kept = demo.build_client("ollama", allow_thinking=True)
+    assert kept.provider.system_suffix == ""  # type: ignore[attr-defined]
 
 
 def test_allow_thinking_is_a_no_op_for_hosted_providers() -> None:

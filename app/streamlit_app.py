@@ -232,6 +232,8 @@ def format_step(event: dict[str, Any]) -> str:
         return f"{icon} `{event['name']}` — {event['summary']}"
     if kind == "nudge":
         return f"↩️ nudge — {event['reason'].replace('_', ' ')}"
+    if kind == "retry":
+        return "🔁 empty reply — retrying with a larger token budget"
     return ""
 
 
@@ -278,6 +280,11 @@ def render_answer(turn: dict[str, Any], *, index: int) -> None:
         st.markdown(turn["answer_md"])
     if turn.get("caveats"):
         st.caption(f"⚠️ {turn['caveats']}")
+    if turn.get("stop_reason") == "empty_replies":
+        st.warning(
+            "The model ran out of room to answer: it spent its whole per-reply budget "
+            "thinking. A narrower question, or a hosted model, usually gets through."
+        )
     if turn.get("stop_reason") == "max_llm_calls":
         st.warning(
             "The agent hit its step budget before finishing — the trace shows how far it got."

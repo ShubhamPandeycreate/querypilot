@@ -7,7 +7,18 @@ enforces the budgets and drives self-correction:
 - hard cap on LLM calls per question (default 12)
 - 3 consecutive run_sql failures -> nudge to answer-or-admit-failure
 - plain text without final_answer -> one nudge to use the tool, then accept
+- an empty reply (no content, no tool calls) -> one retry with a bigger token
+  budget, then stop; see EMPTY REPLIES below
 - every step lands in the Tracer, which powers the demo's trace viewer
+
+EMPTY REPLIES. Reasoning models spend hidden thinking tokens out of the same
+max_tokens budget as their answer, and on Ollama that thinking comes back in a
+separate `reasoning` field. When thinking fills the budget the reply arrives
+with no content AND no tool calls. Nudging that is useless: the next reply
+truncates the same way, and the episode treadmills to the call cap (41 of 55
+BIRD questions stalled exactly this way). The only intervention that can help
+is more room, so the loop retries once with a larger budget and then stops with
+an honest message.
 """
 
 from __future__ import annotations
@@ -37,6 +48,11 @@ MAX_CONSECUTIVE_SQL_FAILURES = 3
 # transcript). 3584 fits a worst-case think plus late-episode prompts inside
 # an 8192-token local context.
 AGENT_MAX_TOKENS = 3584
+# One retry at a larger budget after an empty reply. Sized to fit a late-episode
+# prompt (~2150 tokens measured) plus the answer inside an 8192-token local
+# context; hosted models have far more room and are unaffected.
+AGENT_RETRY_MAX_TOKENS = 5120
+MAX_CONSECUTIVE_EMPTY_REPLIES = 2
 
 
 @dataclass
@@ -45,7 +61,8 @@ class AgentResult:
     sql: str = ""
     caveats: str = ""
     llm_calls: int = 0
-    stop_reason: str = "final_answer"  # max_llm_calls | answered_in_text | final_answer
+    # final_answer | answered_in_text | max_llm_calls | empty_replies
+    stop_reason: str = "final_answer"
     chart_paths: list[str] = field(default_factory=list)
     usage: dict[str, int] = field(default_factory=dict)
 
@@ -59,6 +76,7 @@ class AgentLoop:
         *,
         max_llm_calls: int = MAX_LLM_CALLS,
         max_consecutive_sql_failures: int = MAX_CONSECUTIVE_SQL_FAILURES,
+        max_consecutive_empty_replies: int = MAX_CONSECUTIVE_EMPTY_REPLIES,
         on_step: Callable[[dict[str, Any]], None] | None = None,
     ) -> None:
         self.client = client
@@ -66,6 +84,7 @@ class AgentLoop:
         self.tracer = tracer or Tracer(None)
         self.max_llm_calls = max_llm_calls
         self.max_consecutive_sql_failures = max_consecutive_sql_failures
+        self.max_consecutive_empty_replies = max_consecutive_empty_replies
         self.on_step = on_step  # live UI hook: called with every trace event
 
     def _emit(self, kind: str, **data: Any) -> None:
@@ -87,6 +106,7 @@ class AgentLoop:
 
         llm_calls = 0
         consecutive_sql_failures = 0
+        consecutive_empty_replies = 0
         nudged_for_final_answer = False
         chart_paths: list[str] = []
         total_usage = {"prompt_tokens": 0, "completion_tokens": 0}
@@ -105,7 +125,10 @@ class AgentLoop:
             return result
 
         while llm_calls < self.max_llm_calls:
-            reply = self.client.chat(messages, tools=TOOL_SCHEMAS, max_tokens=AGENT_MAX_TOKENS)
+            # An empty reply means the budget ran out mid-thought; the retry is
+            # the same transcript with more room, not another nudge.
+            budget = AGENT_MAX_TOKENS if not consecutive_empty_replies else AGENT_RETRY_MAX_TOKENS
+            reply = self.client.chat(messages, tools=TOOL_SCHEMAS, max_tokens=budget)
             llm_calls += 1
             for key in total_usage:
                 total_usage[key] += reply.usage.get(key, 0)
@@ -117,6 +140,28 @@ class AgentLoop:
                 n_tool_calls=len(reply.tool_calls),
                 content_preview=(reply.content or "")[:200],
             )
+
+            if not reply.has_tool_calls and not reply.content:
+                # No content and no tool calls: the reply was truncated before
+                # the model produced anything. Retry once with more room.
+                consecutive_empty_replies += 1
+                self._emit("retry", reason="empty_reply", n=consecutive_empty_replies)
+                if consecutive_empty_replies >= self.max_consecutive_empty_replies:
+                    return finish(
+                        AgentResult(
+                            answer_md=(
+                                "The model returned an empty reply twice in a row, which "
+                                "means it used its whole per-reply budget thinking and had "
+                                "nothing left to answer with. Try a narrower question, or a "
+                                "model with more room."
+                            ),
+                            stop_reason="empty_replies",
+                            sql=self.toolbelt.last_result.sql if self.toolbelt.last_result else "",
+                        )
+                    )
+                continue
+
+            consecutive_empty_replies = 0
 
             if not reply.has_tool_calls:
                 # Model answered in text. Nudge once toward final_answer; accept after.

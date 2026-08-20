@@ -26,9 +26,14 @@ class Settings(BaseSettings):
     # qwen3 for reliable tool calling; qwen2.5-coder:7b narrates tool calls as
     # text instead of using the tools channel (observed 2026-08-16).
     ollama_model: str = "qwen3:4b"
-    # qwen3 thinking mode costs ~6 min/question on a 6GB laptop GPU; the
-    # /no_think soft switch trades some SQL quality for ~10x faster iteration.
-    ollama_no_think: bool = True
+    # Sends qwen3's "/no_think" soft switch. MEASURED 2026-08-20 on Ollama
+    # 0.32.13 + qwen3:4b: it does NOT work, and neither does /no_think in the
+    # user message, `think: false`, or chat_template_kwargs. All four produce
+    # the same reasoning volume, which Ollama returns in a separate `reasoning`
+    # field that shares max_tokens with the answer. Defaulting to False so the
+    # prompt does not carry a string that buys nothing; set it True to
+    # experiment if a future model or runtime honours it.
+    ollama_no_think: bool = False
     ollama_base_url: str = "http://localhost:11434/v1"
 
 
@@ -40,7 +45,8 @@ class Provider:
     base_url: str
     api_key: str
     model: str
-    # Appended to the system message (e.g. qwen3's "/no_think" soft switch).
+    # Appended to the system message. A per-provider prompt hook; see
+    # Settings.ollama_no_think for what it does and does not achieve.
     system_suffix: str = ""
 
 

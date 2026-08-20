@@ -83,6 +83,8 @@ def _print_step(event: dict) -> None:
         console.print(f"  {icon} [bold]{event['name']}[/] — {event['summary']}")
     elif kind == "nudge":
         console.print(f"  [yellow]nudge: {event['reason']}[/]")
+    elif kind == "retry":
+        console.print(f"  [yellow]retry ({event['reason']}): empty reply, more room[/]")
 
 
 @app.command()
