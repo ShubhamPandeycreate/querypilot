@@ -20,3 +20,21 @@ jobs:
         run: uv run ruff format --check .
       - name: Tests
         run: uv run pytest
+
+  # The demo image cannot be built on the dev laptop (no Docker daemon), and it
+  # is also the only check that requirements.txt actually resolves on Linux /
+  # Python 3.12 — which is what both deploy targets install from.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the Hugging Face Spaces image
+        run: docker build -t querypilot:ci .
+      - name: Boot it and hit the health endpoint
+        run: |
+          docker run -d --name querypilot -p 7860:7860 querypilot:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:7860/_stcore/health; then echo "healthy"; exit 0; fi
+            sleep 2
+          done
+          echo "app did not become healthy"; docker logs querypilot; exit 1
