@@ -5,6 +5,12 @@ QueryPilot answers questions about a SQL database in plain English. You ask some
 it read-only, fixes the query itself if it fails, and gives you the answer along with every
 step it took to get there.
 
+![QueryPilot answering a question and then showing the trace of every step it took](docs/demo.gif)
+
+*The clip is trimmed. The waiting between steps has been cut out, so the real app is slower
+than it looks here. The run in the recording took 106 seconds end to end on Gemini Flash, and
+the same question against a local model on a laptop GPU takes several minutes.*
+
 The agent loop is written by hand. There is no LangChain and no LangGraph in this project,
 just one OpenAI-compatible client, six tools, and a loop file you can read in a single
 sitting. That was a deliberate choice: the interesting part of an agent is what it does when
