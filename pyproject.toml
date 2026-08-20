@@ -39,6 +39,11 @@ src = ["src", "tests", "scripts"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.isort]
+# evals/ is a first-party package but lives outside src/, so isort would
+# otherwise sort `from evals...` into the third-party block and fail CI.
+known-first-party = ["dbagent", "evals"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

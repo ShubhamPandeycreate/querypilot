@@ -11,7 +11,6 @@ from evals.runner import (
     gold_is_order_sensitive,
     run_eval,
 )
-
 from test_loop import FakeClient, text_reply, tool_reply
 
 ARTIST_COUNT_SQL = "SELECT count(*) FROM Artist"

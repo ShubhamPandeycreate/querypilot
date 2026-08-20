@@ -16,7 +16,6 @@ import json
 import time
 from pathlib import Path
 
-from evals.metrics import results_match
 from rich.console import Console
 from rich.table import Table
 
@@ -26,6 +25,7 @@ from dbagent.config import get_providers
 from dbagent.db.database import Database
 from dbagent.llm.client import ModelClient
 from dbagent.tracing.tracer import Tracer, default_trace_path
+from evals.metrics import results_match
 
 ROOT = Path(__file__).resolve().parent.parent
 QUESTIONS = ROOT / "evals" / "smoke_questions.json"

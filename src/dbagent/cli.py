@@ -169,11 +169,10 @@ def eval(
     out: str = typer.Option("", help="Results JSONL path (default: evals/results/<auto>.jsonl)"),
 ) -> None:
     """Run (or resume) an execution-accuracy eval and print the summary."""
-    from evals.datasets import LOADERS, fixed_subset
-    from evals.runner import run_eval, summarize, write_report
-
     from dbagent.config import get_providers
     from dbagent.llm.client import ModelClient
+    from evals.datasets import LOADERS, fixed_subset
+    from evals.runner import run_eval, summarize, write_report
 
     if dataset not in LOADERS:
         raise typer.BadParameter(f"Unknown dataset {dataset!r}. Choose: {list(LOADERS)}")

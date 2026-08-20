@@ -127,9 +127,7 @@ class AgentLoop:
                         AgentResult(
                             answer_md=reply.content,
                             stop_reason="answered_in_text",
-                            sql=self.toolbelt.last_result.sql
-                            if self.toolbelt.last_result
-                            else "",
+                            sql=self.toolbelt.last_result.sql if self.toolbelt.last_result else "",
                         )
                     )
                 messages.append(reply.raw_message)
