@@ -1,0 +1,18 @@
+# The image only needs src/, app/, data/, .streamlit/ and requirements.txt.
+.git
+.github
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+.env
+.streamlit/secrets.toml
+evals/datasets/downloads
+evals/results
+traces
+tests
+training
+scripts
+uv.lock

@@ -13,7 +13,6 @@ run killed by quota exhaustion continues where it stopped.
 from __future__ import annotations
 
 import json
-import re
 import threading
 import time
 from collections import Counter
@@ -25,6 +24,12 @@ import sqlglot
 from sqlglot import exp
 
 from dbagent.agent.loop import AgentLoop
+from dbagent.agent.single_shot import (
+    SINGLE_SHOT_MAX_TOKENS,
+    build_prompt,
+    extract_sql,
+    schema_text,
+)
 from dbagent.agent.tools import ToolBelt
 from dbagent.db.database import Database
 from dbagent.llm.client import ChatClient
@@ -34,21 +39,11 @@ from evals.metrics import results_match
 
 EVAL_ROW_LIMIT = 100_000  # never let the guard's LIMIT injection distort results
 EVAL_TIMEOUT_S = 30.0
-# Reasoning models spend thinking tokens before any content. qwen3:4b needs
-# 2400-3600 tokens on a typical BIRD question; at 2048 it was truncated
-# mid-thought and returned empty content, which scored as "no SQL produced"
-# (measured 2026-08-19: 6 of the first 7 questions failed this way). NB: run
-# local evals with OLLAMA_NO_THINK=false - suppressing thinking makes qwen3:4b
-# degenerate into endless output on BIRD-difficulty questions (0 SQL in 8
-# trials), while thinking-enabled finishes cleanly. Budget must also fit the
-# context window: max BIRD prompt ~2483 tok + 5120 < 8192 server ctx.
-SINGLE_SHOT_MAX_TOKENS = 5120
-
-SINGLE_SHOT_SYSTEM = """\
-You translate questions into a single SQLite SELECT statement.
-Reply with ONLY the SQL, in a ```sql fenced block. No explanations.
-Use exactly the tables and columns from the provided schema.
-"""
+# The single-shot prompt, its token budget and the SQL extractor live in
+# dbagent.agent.single_shot so the demo app and this harness provably share one
+# implementation. NB: run local evals with OLLAMA_NO_THINK=false — suppressing
+# thinking makes qwen3:4b degenerate into endless output on BIRD-difficulty
+# questions (0 SQL in 8 trials), while thinking-enabled finishes cleanly.
 
 
 @dataclass
@@ -103,30 +98,10 @@ class RateLimitedClient:
 def build_single_shot_prompt(item: EvalItem) -> list[dict[str, Any]]:
     db = Database(item.db_path, row_limit=EVAL_ROW_LIMIT, timeout_seconds=EVAL_TIMEOUT_S)
     try:
-        schemas = db.get_schema(db.table_names())
+        ddl, fks = schema_text(db)
     finally:
         db.close()
-    ddl = "\n\n".join(s.ddl for s in schemas)
-    fks = "\n".join(fk for s in schemas for fk in s.foreign_keys)
-    parts = [f"Database schema:\n{ddl}"]
-    if fks:
-        parts.append(f"Foreign keys:\n{fks}")
-    if item.evidence:
-        parts.append(f"Hint: {item.evidence}")
-    parts.append(f"Question: {item.question}")
-    return [
-        {"role": "system", "content": SINGLE_SHOT_SYSTEM},
-        {"role": "user", "content": "\n\n".join(parts)},
-    ]
-
-
-_SQL_FENCE = re.compile(r"```(?:sql)?\s*(.+?)```", re.DOTALL | re.IGNORECASE)
-
-
-def extract_sql(reply_text: str) -> str:
-    match = _SQL_FENCE.search(reply_text)
-    sql = (match.group(1) if match else reply_text).strip()
-    return sql.rstrip(";").strip()
+    return build_prompt(ddl=ddl, foreign_keys=fks, question=item.question, evidence=item.evidence)
 
 
 def gold_is_order_sensitive(gold_sql: str) -> bool:

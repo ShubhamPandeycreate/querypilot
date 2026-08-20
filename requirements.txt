@@ -1,0 +1,197 @@
+# Deployment pins for Streamlit Community Cloud / Hugging Face Spaces, which
+# install from requirements.txt rather than uv.lock. Regenerate after any
+# dependency change with:
+#   uv export --no-dev --no-emit-project --no-hashes --format requirements-txt > requirements.txt
+# The project itself is not installed there; app/streamlit_app.py puts src/ on sys.path.
+altair==6.2.2
+    # via streamlit
+annotated-doc==0.0.5
+    # via typer
+annotated-types==0.8.0
+    # via pydantic
+anyio==4.14.2
+    # via
+    #   httpx2
+    #   openai
+    #   starlette
+    #   streamlit
+attrs==26.1.0
+    # via
+    #   jsonschema
+    #   referencing
+blinker==1.9.0
+    # via streamlit
+certifi==2026.7.22
+    # via requests
+charset-normalizer==3.5.1
+    # via requests
+click==8.4.2
+    # via
+    #   streamlit
+    #   uvicorn
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via
+    #   click
+    #   tqdm
+    #   typer
+contourpy==1.3.3
+    # via matplotlib
+cycler==0.12.1
+    # via matplotlib
+distro==1.9.0
+    # via openai
+fonttools==4.63.0
+    # via matplotlib
+h11==0.16.0
+    # via
+    #   httpcore2
+    #   uvicorn
+httpcore2==2.10.0 ; sys_platform != 'emscripten'
+    # via httpx2
+httptools==0.8.0
+    # via streamlit
+httpx2==2.10.0
+    # via openai
+httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
+    # via httpx2
+idna==3.18
+    # via
+    #   anyio
+    #   httpx2
+    #   requests
+itsdangerous==2.2.0
+    # via streamlit
+jinja2==3.1.6
+    # via
+    #   altair
+    #   pydeck
+jiter==0.16.0
+    # via openai
+jsonschema==4.26.0
+    # via altair
+jsonschema-specifications==2025.9.1
+    # via jsonschema
+kiwisolver==1.5.0
+    # via matplotlib
+markdown-it-py==4.2.0
+    # via rich
+markupsafe==3.0.3
+    # via jinja2
+matplotlib==3.11.1
+    # via querypilot
+mdurl==0.1.2
+    # via markdown-it-py
+narwhals==2.24.0
+    # via altair
+numpy==2.5.2
+    # via
+    #   contourpy
+    #   matplotlib
+    #   pandas
+    #   pydeck
+    #   streamlit
+openai==3.0.0
+    # via querypilot
+packaging==26.3
+    # via
+    #   altair
+    #   matplotlib
+    #   streamlit
+pandas==3.0.5
+    # via
+    #   querypilot
+    #   streamlit
+pillow==12.3.0
+    # via
+    #   matplotlib
+    #   streamlit
+protobuf==7.35.1
+    # via streamlit
+pyarrow==25.0.1
+    # via streamlit
+pydantic==2.13.4
+    # via
+    #   openai
+    #   pydantic-settings
+pydantic-core==2.46.4
+    # via pydantic
+pydantic-settings==2.15.0
+    # via querypilot
+pydeck==0.9.3
+    # via streamlit
+pygments==2.20.0
+    # via rich
+pyparsing==3.3.2
+    # via matplotlib
+python-dateutil==2.9.0.post0
+    # via
+    #   matplotlib
+    #   pandas
+python-dotenv==1.2.2
+    # via pydantic-settings
+python-multipart==0.0.32
+    # via streamlit
+referencing==0.37.0
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.34.2
+    # via streamlit
+rich==15.0.0
+    # via
+    #   querypilot
+    #   typer
+rpds-py==2026.6.3
+    # via
+    #   jsonschema
+    #   referencing
+shellingham==1.5.4
+    # via typer
+six==1.17.0
+    # via python-dateutil
+sniffio==1.3.1
+    # via openai
+sqlglot==30.17.0
+    # via querypilot
+starlette==1.6.0
+    # via streamlit
+streamlit==1.62.0
+    # via querypilot
+tenacity==9.1.4
+    # via querypilot
+toml==0.10.2
+    # via streamlit
+tqdm==4.70.0
+    # via openai
+truststore==0.10.4 ; sys_platform != 'emscripten'
+    # via
+    #   httpcore2
+    #   httpx2
+typer==0.27.1
+    # via querypilot
+typing-extensions==4.16.0
+    # via
+    #   altair
+    #   anyio
+    #   httpx2
+    #   openai
+    #   pydantic
+    #   pydantic-core
+    #   referencing
+    #   starlette
+    #   streamlit
+    #   typing-inspection
+typing-inspection==0.4.4
+    # via
+    #   pydantic
+    #   pydantic-settings
+tzdata==2026.3 ; sys_platform == 'emscripten' or sys_platform == 'win32'
+    # via pandas
+urllib3==2.7.0
+    # via requests
+uvicorn==0.52.4
+    # via streamlit
+watchdog==6.0.0 ; sys_platform != 'darwin'
+    # via streamlit
+websockets==16.1.1
+    # via streamlit

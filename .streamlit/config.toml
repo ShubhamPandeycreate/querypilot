@@ -1,0 +1,25 @@
+# Applies locally and on both deploy targets. Everything here is presentation
+# or hardening — no secrets ever live in this file (see secrets.toml.example).
+
+[theme]
+base = "dark"
+primaryColor = "#4f9cf9"
+backgroundColor = "#0e1117"
+secondaryBackgroundColor = "#171b26"
+textColor = "#e6e9ef"
+font = "sans serif"
+
+[server]
+# Visitors may upload a SQLite file; dbagent.demo caps it at 20 MB, and this
+# stops anything larger from reaching the process at all.
+maxUploadSize = 25
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# A stack trace in a public demo leaks paths and helps nobody — the app turns
+# provider failures into readable messages instead.
+showErrorDetails = "none"
+toolbarMode = "minimal"

@@ -14,10 +14,15 @@ build/
 
 # Secrets
 .env
+.streamlit/secrets.toml
 
 # Local artifacts
 traces/
 *.log
+
+# Agent scratch (launch.json IS committed: it documents how to run the app)
+.claude/*
+!.claude/launch.json
 
 # Large/generated data (demo DBs ARE committed; benchmark sets are fetched)
 evals/datasets/downloads/
