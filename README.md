@@ -47,22 +47,36 @@ uv sync
 uv run streamlit run app/streamlit_app.py
 ```
 
-If you have [Ollama](https://ollama.com) running locally, that is all you need and it costs
-nothing. Otherwise paste a free API key into the sidebar. Keys you paste stay in your browser
-session, and they are never written to disk or into a trace.
+That is everything you need if you want to use a hosted model. Pick a provider in the sidebar
+and paste a free API key. To run it with no key and no cost at all, install
+[Ollama](https://ollama.com) and pull the model the project defaults to:
+
+```bash
+ollama pull qwen3:4b
+```
+
+Be realistic about the local option. It wants roughly 4GB of VRAM, a question takes a few
+minutes rather than the one minute a hosted model needs, and a 4B model does not always
+manage to finish a question that a hosted model handles comfortably.
+
+One thing worth stating plainly about API keys. Streamlit runs on a server, so a key you
+paste travels to whichever machine is hosting the app and is held in memory for the length of
+your session. It is never written to disk, never recorded in a trace, and it is gone when the
+session ends. On a public deployment you are trusting whoever runs it, which is exactly why
+the intended setup is that visitors bring their own key rather than share one.
 
 The app gives you:
 
 * Two demo databases. Chinook is the classic one. The second is a synthetic retail database
-  generated for this project, so at least one demo is guaranteed to be data no model has
-  memorised. You can also upload your own SQLite file.
+  generated for this project from a fixed seed, so it is data that did not exist anywhere
+  before this repo. You can also upload your own SQLite file, up to 20MB, opened read-only.
 * A switch between **Agent** mode and **Single-shot** mode, per question. These are the same
   two setups the benchmark table below compares, so you can watch the difference instead of
   taking the numbers on trust.
 * Four tabs on every answer: the SQL, the result table, the chart, and the trace. The trace
   tab is the agent's own log, including any query that failed and the retry that fixed it.
-* Spending caps, if the person hosting it chose to supply a shared key. See
-  [src/dbagent/budget.py](src/dbagent/budget.py).
+* Spending caps on every session, tighter when the app is running on an operator's shared key
+  than when you bring your own. See [src/dbagent/budget.py](src/dbagent/budget.py).
 
 ## The benchmark numbers
 

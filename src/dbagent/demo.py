@@ -146,7 +146,8 @@ class KeyChoice:
     @property
     def note(self) -> str:
         return {
-            "byok": "Using your key — it stays in this browser session and is never logged.",
+            "byok": "Using your key. It is held in memory for this session only, and is never "
+            "written to disk or into a trace.",
             "shared": "Using the shared demo key, which is capped per session.",
             "local": "Talking to Ollama on this machine. No key, no quota.",
             "missing": "Add a key in the sidebar to run a question.",
