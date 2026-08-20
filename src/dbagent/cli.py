@@ -186,9 +186,13 @@ def eval(
     if provider != "ollama" and not chosen.api_key:
         console.print(f"[red]No API key configured for {provider}.[/]")
         raise typer.Exit(code=1)
-    # Free-tier defaults, conservative: Gemini flash 5 RPM (observed), Groq 25
-    # (limit 30), OpenRouter 15 (limit 20). Local: effectively unlimited.
-    default_rpm = {"gemini": 5, "groq": 25, "openrouter": 15, "ollama": 600}
+    # Free-tier defaults, conservative: Gemini flash 5 RPM (observed). Groq's
+    # gpt-oss-120b is TPM-bound not RPM-bound (~8000 tok/60s, measured
+    # 2026-08-19 - a real 429 hit at ~3 calls/20s on ~2800-token BIRD
+    # prompts), so 3 approximates the sustainable rate despite the generous
+    # 1000/day request cap. OpenRouter 15 (limit 20). Local: effectively
+    # unlimited.
+    default_rpm = {"gemini": 5, "groq": 3, "openrouter": 15, "ollama": 600}
     effective_rpm = rpm or default_rpm[provider]
 
     out_path = out or f"evals/results/{dataset}_{mode}_{provider}.jsonl"

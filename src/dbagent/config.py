@@ -17,7 +17,11 @@ class Settings(BaseSettings):
     # "-latest" alias tracks the current free-tier Flash model; pin an exact
     # version (e.g. gemini-3.6-flash) when running evals so results reproduce.
     gemini_model: str = "gemini-flash-latest"
-    groq_model: str = "llama-3.3-70b-versatile"
+    # llama-3.3-70b-versatile was retired from Groq's free tier (404 as of
+    # 2026-08-19); gpt-oss-120b replaces it. Free tier is TPM-bound, not
+    # RPM-bound: ~8000 tokens/60s, so eval runs need rpm~=3, not the RPM
+    # headline number.
+    groq_model: str = "openai/gpt-oss-120b"
     openrouter_model: str = "openai/gpt-oss-20b:free"
     # qwen3 for reliable tool calling; qwen2.5-coder:7b narrates tool calls as
     # text instead of using the tools channel (observed 2026-08-16).
