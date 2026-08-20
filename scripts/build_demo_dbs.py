@@ -138,15 +138,21 @@ def build(rng: random.Random) -> dict[str, list[tuple]]:
                 )
             )
 
-    # Sales grow through 2025 and spike in November — a trend worth charting.
+    # Order volume grows month over month and spikes for the November sale, so
+    # "how did revenue trend?" has a real answer and a chart worth drawing.
+    months = [(year, month) for year in (2024, 2025) for month in range(1, 13)]
+    month_weights = []
+    for index, (_, month) in enumerate(months):
+        weight = 1.04**index
+        if month == 11:
+            weight *= 2.1
+        elif month == 12:
+            weight *= 1.4
+        month_weights.append(weight)
+
     def order_date() -> date:
-        start = date(2024, 1, 1)
-        candidate = start + timedelta(days=rng.randrange(730))
-        if candidate.year == 2025 and candidate.month == 11 and rng.random() < 0.5:
-            return candidate
-        if candidate.year == 2024 and rng.random() < 0.35:
-            return candidate + timedelta(days=365)
-        return candidate
+        year, month = rng.choices(months, weights=month_weights)[0]
+        return date(year, month, rng.randrange(1, 29))
 
     orders: list[tuple] = []
     order_items: list[tuple] = []
