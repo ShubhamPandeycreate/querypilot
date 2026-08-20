@@ -67,7 +67,7 @@ uv run python scripts/smoke_test.py                  # check the providers you c
 uv run python -m dbagent chat --provider ollama      # the agent in a terminal
 uv run streamlit run app/streamlit_app.py            # the agent in a browser
 uv run python -m dbagent eval --dataset chinook      # execution-accuracy harness
-uv run pytest                                        # 150 tests, no network required
+uv run pytest                                        # 153 tests, no network required
 ```
 
 Regenerate the synthetic demo database (it is committed, so this is only needed if you change
