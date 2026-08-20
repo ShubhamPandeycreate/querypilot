@@ -20,10 +20,11 @@ build/
 traces/
 *.log
 
-# Personal working files: local run configs and my own deployment checklist.
-# They live on my machine, they are not part of what the repo publishes.
+# Personal working files: local run configs, my deployment checklist, my study
+# notes. They live on my machine, they are not part of what the repo publishes.
 .claude/
 deploy/
+notes/
 
 # Large/generated data (demo DBs ARE committed; benchmark sets are fetched)
 evals/datasets/downloads/
