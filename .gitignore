@@ -20,9 +20,10 @@ build/
 traces/
 *.log
 
-# Agent scratch (launch.json IS committed: it documents how to run the app)
-.claude/*
-!.claude/launch.json
+# Personal working files: local run configs and my own deployment checklist.
+# They live on my machine, they are not part of what the repo publishes.
+.claude/
+deploy/
 
 # Large/generated data (demo DBs ARE committed; benchmark sets are fetched)
 evals/datasets/downloads/

@@ -31,8 +31,8 @@ public URL yet.
 
 ## Try it
 
-There is no public URL yet. Deploying needs a Streamlit Community Cloud account and a
-Hugging Face account, and the full checklist is in [deploy/DEPLOY.md](deploy/DEPLOY.md).
+There is no public URL yet. Deploying it needs a Streamlit Community Cloud account and a
+Hugging Face account, and that is the next job on the list.
 
 To run it on your own machine:
 
@@ -122,7 +122,6 @@ src/dbagent/
 evals/                  benchmark loaders, runner, metrics, reports
 app/streamlit_app.py    the demo app
 tests/                  153 tests, none of which touch the network
-deploy/                 deployment checklist and the Spaces config
 ```
 
 ## Development
