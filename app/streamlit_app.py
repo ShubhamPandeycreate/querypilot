@@ -157,8 +157,9 @@ def sidebar() -> dict[str, Any]:
 
         st.subheader("Model")
         keys = shared_keys()
+        ollama = demo.ollama_is_running()
         providers = list(demo.PROVIDER_LABELS)
-        default_provider = next((p for p in providers if p in keys), "ollama")
+        default_provider = demo.default_provider(keys, ollama=ollama)
         provider = st.selectbox(
             "Provider",
             providers,
@@ -175,7 +176,7 @@ def sidebar() -> dict[str, Any]:
                 help=f"Free key: {demo.KEY_URLS[provider]} — kept in this session only, "
                 "never written to disk or into traces.",
             )
-        choice = demo.resolve_key(provider, user_key, keys)
+        choice = demo.resolve_key(provider, user_key, keys, ollama=ollama)
         st.caption(f"`{demo.model_name(provider)}` — {choice.note}")
 
         st.subheader("Mode")
@@ -501,11 +502,15 @@ def main() -> None:
         disabled=not config["choice"].usable,
     )
     if not config["choice"].usable:
-        key_url = demo.KEY_URLS.get(config["provider"], "")
-        st.info(
-            f"No shared key is configured for {demo.PROVIDER_LABELS[config['provider']]}. "
-            f"Paste your own free key in the sidebar — get one at {key_url}"
-        )
+        if config["choice"].source == "unreachable":
+            # No key to ask for — the note explains what this option is actually for.
+            st.info(config["choice"].note)
+        else:
+            key_url = demo.KEY_URLS.get(config["provider"], "")
+            st.info(
+                f"No shared key is configured for {demo.PROVIDER_LABELS[config['provider']]}. "
+                f"Paste your own free key in the sidebar — get one at {key_url}"
+            )
     pending = st.session_state.pending_question
     st.session_state.pending_question = None
     question = asked or pending

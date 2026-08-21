@@ -154,7 +154,7 @@ src/dbagent/
   tracing/tracer.py     JSONL traces
 evals/                  benchmark loaders, runner, metrics, reports
 app/streamlit_app.py    the demo app
-tests/                  161 tests, none of which touch the network
+tests/                  166 tests, none of which touch the network
 ```
 
 ## Development
@@ -168,7 +168,7 @@ uv run python scripts/smoke_test.py                  # check your providers resp
 uv run python -m dbagent chat --provider ollama      # the agent in a terminal
 uv run streamlit run app/streamlit_app.py            # the agent in a browser
 uv run python -m dbagent eval --dataset chinook      # the accuracy harness
-uv run pytest                                        # 161 tests, no network needed
+uv run pytest                                        # 166 tests, no network needed
 ```
 
 The synthetic demo database is committed, so you only need to rebuild it if you change the

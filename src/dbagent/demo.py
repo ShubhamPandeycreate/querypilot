@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import os
 import re
+import socket
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dbagent.budget import BYOK_BUDGET, DEMO_BUDGET, LOCAL_BUDGET, SessionBudget
 from dbagent.config import Settings, get_providers, get_settings
@@ -141,7 +143,7 @@ class KeyChoice:
 
     @property
     def usable(self) -> bool:
-        return self.source != "missing"
+        return self.source not in ("missing", "unreachable")
 
     @property
     def note(self) -> str:
@@ -151,15 +153,57 @@ class KeyChoice:
             "shared": "Using the shared demo key, which is capped per session.",
             "local": "Talking to Ollama on this machine. No key, no quota.",
             "missing": "Add a key in the sidebar to run a question.",
+            "unreachable": "No Ollama server is reachable from here — that option is for "
+            "running the repo on your own machine. Pick a hosted provider and paste a free key.",
         }[self.source]
 
 
+def ollama_is_running(timeout: float = 0.4) -> bool:
+    """Whether an Ollama server is actually listening at the configured URL.
+
+    The deployed demo has no Ollama, and the failure is silent in an unhelpful
+    way: the key field hides itself for a provider that needs no key, so a
+    visitor gets an enabled chat box that dials localhost on the server.
+
+    Deliberately not cached. Nothing listening gives an immediate refusal rather
+    than a timeout, so this costs a syscall per rerun, and probing live means a
+    local Ollama started after the app is picked up without a restart.
+    """
+    url = urlparse(get_settings().ollama_base_url)
+    port = url.port or (443 if url.scheme == "https" else 80)
+    try:
+        with socket.create_connection((url.hostname or "localhost", port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def default_provider(shared_keys: Mapping[str, str] | None = None, *, ollama: bool = True) -> str:
+    """Which provider the sidebar opens on.
+
+    An operator's shared key wins, since configuring one is a statement of
+    intent. Otherwise prefer a local Ollama when one is genuinely there, and
+    fall back to the first hosted provider, whose key field is the instruction.
+    """
+    keys = shared_keys or {}
+    for name in PROVIDER_LABELS:
+        if keys.get(name, "").strip():
+            return name
+    if ollama:
+        return "ollama"
+    return next(name for name in PROVIDER_LABELS if name != "ollama")
+
+
 def resolve_key(
-    provider: str, user_key: str = "", shared_keys: Mapping[str, str] | None = None
+    provider: str,
+    user_key: str = "",
+    shared_keys: Mapping[str, str] | None = None,
+    *,
+    ollama: bool = True,
 ) -> KeyChoice:
     """A pasted key always wins; the operator's shared key is the fallback."""
     if provider == "ollama":
-        return KeyChoice(provider, "", "local")
+        return KeyChoice(provider, "", "local" if ollama else "unreachable")
     if user_key.strip():
         return KeyChoice(provider, user_key.strip(), "byok")
     shared = (shared_keys or {}).get(provider, "").strip()

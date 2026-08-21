@@ -74,6 +74,38 @@ def test_ollama_never_needs_a_key() -> None:
     assert demo.budget_template(choice) is LOCAL_BUDGET
 
 
+def test_ollama_is_unusable_when_no_server_is_listening() -> None:
+    """The deployed demo has no Ollama, and the old code let a visitor ask a
+    question anyway: no key field is drawn for Ollama, so they got an enabled
+    chat box that dialled localhost on the server."""
+    choice = demo.resolve_key("ollama", "", {}, ollama=False)
+    assert choice.source == "unreachable"
+    assert not choice.usable
+    assert "own machine" in choice.note
+
+
+def test_default_provider_prefers_a_configured_shared_key() -> None:
+    assert demo.default_provider({"groq": "operator-key"}, ollama=True) == "groq"
+
+
+def test_default_provider_uses_ollama_when_it_is_running() -> None:
+    assert demo.default_provider({}, ollama=True) == "ollama"
+
+
+def test_default_provider_falls_back_to_a_hosted_provider() -> None:
+    """What the deployment actually hits: no shared key, no Ollama. It must open
+    on a provider whose key field tells the visitor what to do."""
+    chosen = demo.default_provider({}, ollama=False)
+    assert chosen != "ollama"
+    assert chosen in demo.KEY_URLS
+
+
+def test_default_provider_ignores_a_blank_shared_key() -> None:
+    """Groq rather than Gemini: Gemini is the fallback, so a blank Gemini key
+    cannot tell "ignored the blank" apart from "fell back to it"."""
+    assert demo.default_provider({"groq": "   "}, ollama=False) != "groq"
+
+
 def test_shared_keys_from_env_skips_blanks() -> None:
     from dbagent.config import Settings
 
