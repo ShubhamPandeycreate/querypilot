@@ -16,8 +16,8 @@ just one OpenAI-compatible client, six tools, and a loop file you can read in a 
 sitting. That was a deliberate choice: the interesting part of an agent is what it does when
 a tool call fails, and a framework hides exactly that.
 
-Status: phases 0 to 4 are done. The app runs and is tested, but it is not deployed to a
-public URL yet.
+Status: phases 0 to 4 are done, and the app is live at
+[querypilot.streamlit.app](https://querypilot-bq2osiqgeiomhfvdczfwrm.streamlit.app/).
 
 ## What it does
 
@@ -37,8 +37,12 @@ public URL yet.
 
 ## Try it
 
-There is no public URL yet. Deploying it needs a Streamlit Community Cloud account and a
-Hugging Face account, and that is the next job on the list.
+**[querypilot.streamlit.app](https://querypilot-bq2osiqgeiomhfvdczfwrm.streamlit.app/)**
+
+The demo ships no shared key, so it runs on yours: pick Gemini, Groq or OpenRouter in the
+sidebar and paste a free key from the link it shows you. That is the deliberate arrangement —
+see the note on keys below. Community Cloud puts an idle app to sleep, so the first visit
+after a quiet spell takes about 30 seconds to wake.
 
 To run it on your own machine:
 
@@ -150,7 +154,7 @@ src/dbagent/
   tracing/tracer.py     JSONL traces
 evals/                  benchmark loaders, runner, metrics, reports
 app/streamlit_app.py    the demo app
-tests/                  159 tests, none of which touch the network
+tests/                  161 tests, none of which touch the network
 ```
 
 ## Development
@@ -164,7 +168,7 @@ uv run python scripts/smoke_test.py                  # check your providers resp
 uv run python -m dbagent chat --provider ollama      # the agent in a terminal
 uv run streamlit run app/streamlit_app.py            # the agent in a browser
 uv run python -m dbagent eval --dataset chinook      # the accuracy harness
-uv run pytest                                        # 159 tests, no network needed
+uv run pytest                                        # 161 tests, no network needed
 ```
 
 The synthetic demo database is committed, so you only need to rebuild it if you change the
