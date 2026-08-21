@@ -16,6 +16,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 # A bare `git clone` should run without `pip install -e .` first (Streamlit
 # Community Cloud installs requirements.txt, not the project itself).
@@ -44,7 +45,7 @@ from dbagent.tracing.tracer import Tracer  # noqa: E402
 
 REPO_URL = "https://github.com/ShubhamPandeycreate/querypilot"
 REPORT_URL = f"{REPO_URL}/blob/main/evals/reports/baseline.md"
-SESSION_DIR = Path(tempfile.gettempdir()) / "querypilot_session"
+SESSION_ROOT = Path(tempfile.gettempdir()) / "querypilot_session"
 # One process serves every visitor, so this window is genuinely shared.
 SHARED_KEY_CALLS_PER_HOUR = 60
 
@@ -76,6 +77,16 @@ def init_state() -> None:
     state.setdefault("budget_source", None)
     state.setdefault("uploaded_db", None)
     state.setdefault("pending_question", None)
+    state.setdefault("session_id", uuid4().hex)
+
+
+def session_dir() -> Path:
+    """This visitor's own scratch space for uploads and rendered charts.
+
+    One process serves everyone, so a flat directory would let two visitors who
+    upload the same filename overwrite each other's database.
+    """
+    return SESSION_ROOT / st.session_state.session_id
 
 
 def budget_for(choice: demo.KeyChoice) -> SessionBudget:
@@ -129,7 +140,7 @@ def sidebar() -> dict[str, Any]:
             if upload is not None:
                 try:
                     state.uploaded_db = str(
-                        demo.save_upload(upload.getvalue(), upload.name, SESSION_DIR)
+                        demo.save_upload(upload.getvalue(), upload.name, session_dir())
                     )
                 except ValueError as error:
                     st.error(str(error))
@@ -419,7 +430,7 @@ def run_question(config: dict[str, Any], question: str) -> dict[str, Any]:
                 turn["columns"] = result.result.columns
                 turn["rows"] = result.result.rows
         else:
-            belt = ToolBelt(database, charts_dir=SESSION_DIR / "charts")
+            belt = ToolBelt(database, charts_dir=session_dir() / "charts")
             events: list[dict[str, Any]] = []
 
             def on_step(event: dict[str, Any]) -> None:
