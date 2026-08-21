@@ -240,14 +240,27 @@ def test_tracer_writes_jsonl_file(belt: ToolBelt, tmp_path: Path) -> None:
     assert lines[0]["provider"] == "fake"
 
 
-def test_chart_summary_hides_the_absolute_path(belt: ToolBelt) -> None:
-    """Traces are downloadable from the public demo, so they must not carry
-    the server's directory layout (or, running locally, a username)."""
+@pytest.mark.parametrize(
+    "chart_path",
+    [
+        r"C:\Users\someone\AppData\Local\Temp\charts\chart_1.png",
+        "/tmp/querypilot_session/charts/chart_1.png",
+        "chart_1.png",
+    ],
+)
+def test_chart_summary_hides_the_absolute_path(chart_path: str) -> None:
+    """Traces are downloadable from the public demo, so they must not carry the
+    server's directory layout (or, running locally, a username).
+
+    Parametrized across separators on purpose: this test passed on Windows and
+    failed on Linux, because Path().name does not split a Windows path there.
+    """
     from dbagent.agent.loop import _summarize
 
-    summary = _summarize("render_chart", {"chart_path": r"C:\Users\someone\AppData\chart_1.png"})
+    summary = _summarize("render_chart", {"chart_path": chart_path})
     assert summary == "chart saved: chart_1.png"
     assert "Users" not in summary
+    assert "tmp" not in summary
 
 
 def empty_reply() -> LLMReply:

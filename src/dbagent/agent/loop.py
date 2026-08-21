@@ -26,7 +26,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from dbagent.agent.prompts import (
@@ -274,8 +273,12 @@ def _summarize(tool_name: str, result: dict[str, Any]) -> str:
     if tool_name == "render_chart":
         # Filename only: traces are downloadable from the public demo, and an
         # absolute path would publish the server's directory layout (and, when
-        # run locally, the operator's username).
-        return f"chart saved: {Path(result['chart_path']).name}"
+        # run locally, the operator's username). Split on both separators by
+        # hand rather than with pathlib: a trace recorded on Windows is often
+        # read on Linux, where Path() does not treat a backslash as a separator
+        # and hands back the whole path instead.
+        filename = str(result["chart_path"]).replace("\\", "/").rsplit("/", 1)[-1]
+        return f"chart saved: {filename}"
     if tool_name == "final_answer":
         return f"answer: {result['answer_md'][:120]}"
     return "ok"
