@@ -80,8 +80,16 @@ The app gives you:
 
 ## The benchmark numbers
 
-BIRD Mini-Dev, a fixed subset of 100 questions, scored on execution accuracy (does the
-predicted query return the same rows as the reference query):
+Scored on execution accuracy: does the predicted query return the same rows as the
+reference query.
+
+On the **full BIRD Mini-Dev set, all 500 questions**, the local 4B model scores
+**47.0%** (235/500, 95% CI [42.7, 51.4]) in single-shot mode, at 48 seconds per question
+on a 6GB laptop GPU and no cost per query.
+
+The three-way comparison below runs on a fixed 100-question subset, because cloud free
+tiers and local wall-clock could not fund the other two configurations at full scale.
+Every row is the same 100 questions:
 
 | model | mode | accuracy | average latency |
 |---|---|---|---|
@@ -91,16 +99,17 @@ predicted query return the same rows as the reference query):
 
 Two things worth saying plainly about this table.
 
-A quantised 4B model running on a laptop lands within six points of a 120B hosted model, at
-no cost per query. That is the good news.
+A quantised 4B model running on a laptop lands within six points of a 120B hosted model,
+on identical questions, at no cost per query. That is the good news.
 
-The agent lost to single-shot prompting on the small model, by three points. That is not the
-result the project was hoping for, and it is reported anyway. The
-[full report](evals/reports/baseline.md) works through why: letting a small model choose
-which tables to inspect often narrows its context onto the wrong ones, and only three of the
-eleven losses were caused by running out of steps. The agent did win on the easiest bucket of
-questions. The honest conclusion is that agentic self-correction needs a model with enough
-capability to steer, and 4B is below that line.
+The agent scored three points *below* plain single-shot prompting, which is not the result
+the project was hoping for, and it is reported anyway. It is also not statistically
+significant: paired on the same questions there are only 19 discordant pairs, and
+McNemar's exact test gives p = 0.648. The [full report](evals/reports/baseline.md) gives
+the honest version, which is that the point estimate favours single-shot, the mechanism
+behind the losses is interesting (8 of 11 were wrong answers after normal-length episodes,
+not budget exhaustion), and settling the question properly needs about 400 paired
+questions.
 
 ## How it works
 
