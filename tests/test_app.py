@@ -20,8 +20,15 @@ ARTIST_SQL = "SELECT count(*) FROM Artist"
 
 @pytest.fixture(autouse=True)
 def no_real_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A developer's .env must never leak into a test run."""
+    """Pin everything the sidebar's provider choice depends on.
+
+    A developer's .env must never leak into a test run, and since
+    `default_provider` started probing for a live Ollama the suite would
+    otherwise pass or fail depending on whether one happens to be running on
+    the machine. Both inputs are stubbed; tests that care set them explicitly.
+    """
     monkeypatch.setattr(demo, "shared_keys_from_env", dict)
+    monkeypatch.setattr(demo, "ollama_is_running", lambda *a, **k: True)
 
 
 def app(monkeypatch: pytest.MonkeyPatch, client: FakeClient | None = None) -> AppTest:
@@ -68,7 +75,9 @@ def test_sidebar_lists_the_demo_databases(monkeypatch: pytest.MonkeyPatch) -> No
     assert picker.value == "chinook"
 
 
-def test_defaults_to_ollama_when_no_shared_key_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_defaults_to_ollama_when_it_is_running_and_no_shared_key_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     at = app(monkeypatch).run()
     assert at.sidebar.selectbox[1].value == "ollama"
     assert not at.sidebar.text_input  # no key box for a local model
@@ -209,3 +218,26 @@ def test_duplicate_result_columns_are_disambiguated() -> None:
     spec.loader.exec_module(module)
     frame = module.to_frame(["Name", "Name", "n"], [("a", "b", 1)])
     assert list(frame.columns) == ["Name", "Name (2)", "n"]
+
+
+def test_no_ollama_and_no_key_disables_the_chat_box(monkeypatch: pytest.MonkeyPatch) -> None:
+    """What a visitor to the deployed demo sees: no Ollama on the server, no
+    shared key, so the app must ask for a key rather than offering a chat box
+    that would dial localhost on the host."""
+    monkeypatch.setattr(demo, "ollama_is_running", lambda *a, **k: False)
+    at = app(monkeypatch).run()
+
+    assert not at.exception
+    assert at.sidebar.selectbox[1].value != "ollama"
+    assert at.chat_input[0].disabled
+    assert any("paste your own free key" in message.value.lower() for message in at.info)
+
+
+def test_ollama_stays_selectable_when_a_server_is_reachable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(demo, "ollama_is_running", lambda *a, **k: True)
+    at = app(monkeypatch).run()
+
+    assert at.sidebar.selectbox[1].value == "ollama"
+    assert not at.chat_input[0].disabled

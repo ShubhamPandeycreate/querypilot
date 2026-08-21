@@ -95,25 +95,29 @@ The three-way comparison below runs on a fixed 100-question subset, because clou
 tiers and local wall-clock could not fund the other two configurations at full scale.
 Every row is the same 100 questions:
 
-| model | mode | accuracy | average latency |
-|---|---|---|---|
-| qwen3:4b, local on a 6GB laptop GPU | single-shot | **44.0%** | 54.5s |
-| qwen3:4b, local on a 6GB laptop GPU | agent | 41.0% | 287.7s |
-| gpt-oss-120b on Groq | single-shot | **50.0%** | 20.0s |
+| model | mode | accuracy | average latency | model calls |
+|---|---|---|---|---|
+| qwen3:4b, local on a 6GB laptop GPU | single-shot | **44.0%** | 54.5s | 1.00 |
+| qwen3:4b, local on a 6GB laptop GPU | agent | 43.0% | 212.3s | 6.66 |
+| gpt-oss-120b on Groq | single-shot | **50.0%** | 20.0s | 1.00 |
 
 Two things worth saying plainly about this table.
 
 A quantised 4B model running on a laptop lands within six points of a 120B hosted model,
 on identical questions, at no cost per query. That is the good news.
 
-The agent scored three points *below* plain single-shot prompting, which is not the result
-the project was hoping for, and it is reported anyway. It is also not statistically
-significant: paired on the same questions there are only 19 discordant pairs, and
-McNemar's exact test gives p = 0.648. The [full report](evals/reports/baseline.md) gives
-the honest version, which is that the point estimate favours single-shot, the mechanism
-behind the losses is interesting (8 of 11 were wrong answers after normal-length episodes,
-not budget exhaustion), and settling the question properly needs about 400 paired
-questions.
+**The agent and plain single-shot prompting are indistinguishable on accuracy.** 43.0%
+against 44.0%, and paired on the same questions the agent wins 9 that single-shot loses
+while losing 10 that single-shot wins. McNemar's exact test on those 19 discordant pairs
+gives p = 1.000, which is as close to no difference as data gets. For that, agent mode
+pays 6.7x the model calls and 3.9x the wall clock.
+
+So on this benchmark, with this model, the loop does not answer more questions correctly.
+It earns its place for other reasons: it shows its work, it can chart a result, and it does
+not need the whole schema to fit in one prompt. That is a narrower claim than the project
+set out to make, and it is the one the data supports. The
+[full report](evals/reports/baseline.md) has the mechanism behind the individual losses,
+and the arithmetic on what settling this properly would cost.
 
 ## How it works
 

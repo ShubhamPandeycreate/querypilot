@@ -41,7 +41,7 @@ one of those duplicate pairs scored a miss and a match on identical input.
 | provider | model | mode | accuracy | no-SQL | exec-fail | avg calls | avg latency |
 |---|---|---|---|---|---|---|---|
 | ollama (local) | qwen3:4b | single-shot | **44.0%** (44/100) | 9 | 5 | 1.00 | 54.5s |
-| ollama (local) | qwen3:4b | agent | **41.0%** (41/100) | 16 | 2 | 7.42 | 287.7s |
+| ollama (local) | qwen3:4b | agent | **43.0%** (43/100) | 8 | 1 | 6.66 | 212.3s |
 | groq | openai/gpt-oss-120b | single-shot | **50.0%** (50/100) | 0 | 4 | 1.00 | 20.0s |
 
 By difficulty (same 100 questions):
@@ -49,7 +49,7 @@ By difficulty (same 100 questions):
 | | challenging (15) | moderate (52) | simple (33) |
 |---|---|---|---|
 | local single-shot | 8 (53%) | 19 (37%) | 17 (52%) |
-| local agent | 5 (33%) | 16 (31%) | 20 (61%) |
+| local agent | 5 (33%) | 19 (37%) | 19 (58%) |
 | groq single-shot | 9 (60%) | 22 (42%) | 19 (58%) |
 
 ## What the numbers say
@@ -63,29 +63,42 @@ full-set figure of 47.0% is *not* comparable to Groq's number, which is subset-o
 [34.7, 53.8], and the full-set value of 47.0% falls inside it. Running the other 400
 questions narrowed the interval from ±9.5 to ±4.4 points.
 
-**Agentic self-correction did not beat single-shot here, but the comparison is
-underpowered.** 41.0% vs 44.0%, at 7.4x the LLM calls and 5.3x the wall clock. Paired on
-the same 100 questions: 33 both correct, 48 both wrong, agent-only 8, single-shot-only
-11. That is **19 discordant pairs, McNemar exact two-sided p = 0.648** — a 3-point gap
-on 19 pairs is not distinguishable from noise. The point estimate favours single-shot;
-the data cannot yet support a stronger claim than that. Settling it needs roughly 400
-paired questions, which is about 32 hours of local agent-mode inference.
+**Agent mode and single-shot are indistinguishable on accuracy.** 43.0% vs 44.0%.
+Paired on the same 100 questions: 34 both correct, 47 both wrong, agent-only 9,
+single-shot-only 10. That is **19 discordant pairs, McNemar exact two-sided
+p = 1.000**, which is as close to no difference as a paired comparison can produce.
+Agent mode pays 6.7x the model calls (6.66 vs 1.00) and 3.9x the wall clock (5.9h vs
+1.5h) for that parity. Distinguishing a real difference of a few points would need
+roughly 400 paired questions, about 32 hours of local agent inference.
 
-What the paired data *does* show is a mechanism worth reporting, independent of
-significance:
+The per-question data still shows a mechanism worth reporting, independent of
+significance. Of the questions agent mode loses, most are wrong answers after a normal
+five to eight call episode rather than budget exhaustion: the agent explored the schema,
+wrote confident SQL, and got a different answer than a single shot at the full schema
+would have. The plausible reading is that a 4B model choosing which tables to inspect
+narrows its own context onto the wrong ones. Suggestive, not established.
 
-- **3 losses** were budget exhaustion — the episode hit the 12-call cap with no SQL ever
-  produced. All 16 of agent mode's no-SQL failures are cap-outs, every one at exactly 12
-  calls.
-- **8 losses** were *wrong results after a normal-length episode* (5-8 calls). The agent
-  explored the schema, wrote confident SQL, and got a different answer than a single shot
-  at the full schema would have.
+**What the loop fix changed, and what it did not.** These agent numbers come from a
+re-run after fixing a loop bug where a truncated reply (no content, no tool calls) was
+answered with a nudge, which produced another truncated reply, until the 12-call cap.
+Re-running the same 100 questions with the fix:
 
-So the losses are not mainly a budget problem. The plausible reading is that a 4B model
-choosing which tables to inspect narrows its own context onto the wrong ones, then writes
-correct-looking SQL over an incomplete picture. Agent mode is also the only configuration
-that beats single-shot on `simple` questions (20/33 vs 17/33), where one self-correction
-pass has room to land. Both observations are suggestive, not established.
+| | old loop | fixed loop |
+|---|---|---|
+| accuracy | 41.0% | 43.0% |
+| produced no SQL at all | 16 | 8 |
+| hit the 12-call cap | 16 | 2 |
+| model calls | 742 | 666 |
+| wall clock | 7.99h | **5.90h** |
+
+The accuracy change is noise: gained 9, lost 7, McNemar p = 0.804. What the fix
+delivered is robustness and cost, halving the dead episodes and removing a quarter of
+the runtime. Two details worth keeping: of the 16 old cap-outs, 8 now produce SQL and
+only **1** of those is correct, so the treadmill was not hiding good answers; and the
+new early-stop almost never fires, because the retry at a larger token budget usually
+rescues the episode instead. The published number before this re-run described a loop
+that no longer exists, which is why the re-run came before any attempt to extend the
+comparison.
 
 **A retraction.** An earlier version of this report argued that `moderate` was the
 weakest bucket for every configuration and that a model-independent dip in the middle
@@ -136,7 +149,7 @@ uv run python -m dbagent eval --dataset bird --mode single_shot --provider ollam
 
 # the shared 100-question subset
 uv run python -m dbagent eval --dataset bird --mode single_shot --provider ollama --subset 100
-uv run python -m dbagent eval --dataset bird --mode agent --provider ollama --subset 100
+uv run python -m dbagent eval --dataset bird --mode agent --provider ollama --subset 100 \n  --out evals/results/bird_agent_ollama_fixedloop.jsonl
 uv run python -m dbagent eval --dataset bird --mode single_shot --provider groq --subset 100
 ```
 
